@@ -30,16 +30,17 @@ print(device)
 file="synthetic data"
 
 ts_dataset=ts_textual(128,128,tokenizer_modified,sft_file,device=device)
-ts_loader =DataLoader(ts_dataset,batch_size=5,shuffle=True,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer_modified))
+ts_loader =DataLoader(ts_dataset,batch_size=5,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer_modified))
 
 class MultiModalInferenceEngine:
-    def __init__(self,model_path,patch_len,conv_layers,tokenizer,checkpoint_dir=None,device=device):
+    def __init__(self,output_file,model_path,patch_len,conv_layers,tokenizer,checkpoint_dir=None,device=device):
         """self.prompt=prompt
         self.raw_ts=raw_ts"""
         self.device = device
         self.model_path=model_path
         self.patch_len=patch_len
         self.conv_layers=conv_layers
+        self.output_file=output_file
     
         ###load the expanded tokenizer
         self.tokenizer=tokenizer
@@ -52,7 +53,6 @@ class MultiModalInferenceEngine:
             low_cpu_mem_usage=True,
             device_map=None
             )
-                 
         self.base_model.resize_token_embeddings(len(self.tokenizer))
         # 3. Load PEFT Adapters
         self.model = PeftModel.from_pretrained(self.base_model, f"{checkpoint_dir}/phi4-ts-adapter_3")
@@ -78,37 +78,48 @@ class MultiModalInferenceEngine:
         """text_query: "The signal is <ts> <ts/>. What is the trend?"
         padded_ts_input: List of tensors, each (max_patches, patch_length)"""
         
+        ###responses =[]
         # --- Preprocessed data object---
         # batch of outputs (BS=5, N, Max_Ch, P)
-        ts_input=ts_loader['time_series_padded']
-        attn_mask=ts_loader['attn_mask'] 
-        input_ids=ts_loader['input_ids']
-        ts_pairs=ts_loader['ts_pairs']
-        ts_seq_index=ts_loader["ts_indices"]
-        textual_index=ts_loader['textual_indices']
-        # Encode TS
-        # ts_embedding output: (bs, max_ch, max_patches, d_model)
-        ts_embedding = self.ts_encoder(ts_input)
-        
-        # --- Assemble Embeddings ---
-        # Use refined assembly logic (handling the 10 tokens per channel)
-        input_embeds = self.v2_assemble_input_embeds(input_ids,ts_embedding,ts_seq_index,textual_index,ts_pairs)
+        with open(self.output_file,'a',encoding='utf-8') as f:
+            with torch.no_grad(): 
+                for batch in ts_loader:
+                    ts_input=batch['time_series_padded']
+                    attn_mask=batch['attn_mask'] 
+                    input_ids=batch['input_ids']
+                    ts_pairs=batch['ts_pairs']
+                    ts_seq_index=batch["ts_indices"]
+                    textual_index=batch['textual_indices']
+                    # Encode TS
+                    # ts_embedding output: (bs, max_ch, max_patches, d_model)
+                    ts_embedding = self.ts_encoder(ts_input)
+                
+                # --- Assemble Embeddings ---
+                # Use refined assembly logic (handling the 10 tokens per channel)
+                    input_embeds = self.v2_assemble_input_embeds(input_ids,ts_embedding,ts_seq_index,textual_index,ts_pairs)
 
-        # --- Generation ---
-        output_ids = self.model.generate(
-            inputs_embeds=input_embeds,
-            attention_mask=attn_mask,
-            max_new_tokens=max_new_tokens,
-            pad_token_id=self.tokenizer.eos_token_id,
-            eos_token_id=self.tokenizer.eos_token_id,
-            repetition_penalty=1.1,
-            do_sample=False,
-            ##num_beams=3,
-            temperature=0.1
-        )
+                # --- Generation ---
+                    output_ids = self.model.generate(
+                        inputs_embeds=input_embeds,
+                        attention_mask=attn_mask,
+                        max_new_tokens=max_new_tokens,
+                        pad_token_id=self.tokenizer.eos_token_id,
+                        eos_token_id=self.tokenizer.eos_token_id,
+                        repetition_penalty=1.1,
+                        do_sample=False,
+                        ##num_beams=3,
+                        temperature=0.1
+                    )
+                    
+                    responses=self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+                
+                    for i, text in enumerate(responses):
+                        record={"sample_id": f'sample{i}', 
+                                "prediction": text.strip()
+                                }
+                        # Write as a single line JSON (the 'l' in jsonl)
+                        f.write(json.dumps(record) + "\n")
         
-        return self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-
     def _assemble_inference_embeds(self, input_ids, ts_embeddings, ts_pairs):
         ###based on the scatter logic to assemble the input_context and ts_embeddings
         # Implementation based on our previous scatter logic
@@ -180,18 +191,18 @@ class MultiModalInferenceEngine:
 
 conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
-engine = MultiModalInferenceEngine(llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=file_path,device=device)
+engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=file_path,device=device)
+
+## loop around batches to return and generate predictions
+
 responses = engine.predict(ts_loader,max_new_tokens=100)
 
 ##save the response
-with open(res_file,'w',encoding='utf-f') as f:
-    for i, text in enumerate(responses):
+""""
+    for i, text in enumerate():
         record = {
             "sample_id": i, 
             "prediction": text.strip()
         }
         # Write as a single line JSON (the 'l' in jsonl)
-        f.write(json.dumps(record) + "\n")
-
-print('file_written')
-
+        f.write(json.dumps(record) + "\n")"""
