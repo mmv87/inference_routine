@@ -18,7 +18,9 @@ import os
  ##Assemble the input embeds
  ##llm_model.generate() using the input_embeds
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-file_path="/home/mmk/projects/def-zonata/mmk/version_2"
+
+file_path="/home/mmk/projects/def-zonata/mmk/version_2/"
+checkpoint_dir="/home/mmk/projects/def-zonata/mmk/version_2/stage_2"
 llm_model_path="/home/mmk/projects/def-zonata/mmk/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/7a8c4e2e81eae20a606d811f475d7dc316dd916a"
 
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response.jsonl')
@@ -26,7 +28,7 @@ sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
 
 tokenizer_path =os.path.join(file_path,'llm_tokenizer')
 tokenizer_modified = AutoTokenizer.from_pretrained(tokenizer_path)
-print(device) 
+###print(device) 
 file="synthetic data"
 
 ts_dataset=ts_textual(128,128,tokenizer_modified,sft_file,device=device)
@@ -55,7 +57,7 @@ class MultiModalInferenceEngine:
             )
         self.base_model.resize_token_embeddings(len(self.tokenizer))
         # 3. Load PEFT Adapters
-        self.model = PeftModel.from_pretrained(self.base_model, f"{checkpoint_dir}/phi4-ts-adapter_3")
+        self.model = PeftModel.from_pretrained(self.base_model, f"{checkpoint_dir}/phi4-ts-adapter_ver2")
         self.model = self.model.merge_and_unload()
         self.model.to(self.device).eval()
         
@@ -69,7 +71,7 @@ class MultiModalInferenceEngine:
         self.ts_encoder=llm_projection(self.ts_conv_module,64,self.ts_transformer,512,1024,3072)
 
         # Loading from the state_dict saved during training
-        self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_encoder_stage3.pth"))
+        self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_stage_2_ver_2.pth"))
         self.ts_encoder.to(self.device).eval()
         
     @torch.no_grad()
@@ -119,6 +121,8 @@ class MultiModalInferenceEngine:
                                 }
                         # Write as a single line JSON (the 'l' in jsonl)
                         f.write(json.dumps(record) + "\n")
+                        print('file_written')
+                        
         
     def _assemble_inference_embeds(self, input_ids, ts_embeddings, ts_pairs):
         ###based on the scatter logic to assemble the input_context and ts_embeddings
@@ -191,11 +195,11 @@ class MultiModalInferenceEngine:
 
 conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
-engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=file_path,device=device)
+engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
 
 ## loop around batches to return and generate predictions
 
-responses = engine.predict(ts_loader,max_new_tokens=100)
+engine.predict(ts_loader,max_new_tokens=100)
 
 ##save the response
 """"
