@@ -33,7 +33,7 @@ ts_dataset=ts_textual(128,128,tokenizer_modified,sft_file,device=device)
 ts_loader =DataLoader(ts_dataset,batch_size=5,shuffle=True,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer_modified))
 
 class MultiModalInferenceEngine:
-    def __init__(self,model_path,patch_len,conv_layers,tokenizer,checkpoint_dir,device=device):
+    def __init__(self,model_path,patch_len,conv_layers,tokenizer,checkpoint_dir=None,device=device):
         """self.prompt=prompt
         self.raw_ts=raw_ts"""
         self.device = device
@@ -178,8 +178,9 @@ class MultiModalInferenceEngine:
         return final_container
     
 
+conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
-engine = MultiModalInferenceEngine(llm_model_path,tokenizer_modified,checkpoint_dir=file_path,device=device)
+engine = MultiModalInferenceEngine(llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=file_path,device=device)
 responses = engine.predict(ts_loader,max_new_tokens=100)
 
 ##save the response
