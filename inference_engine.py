@@ -198,7 +198,7 @@ conv_layers =[(128,5,1),(64,3,1)]
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
 
 ## loop around batches to return and generate prediction
-engine.predict(ts_loader,max_new_tokens=100)
+engine.predict(ts_loader,max_new_tokens=500)
 ##save the response
 """"
     for i, text in enumerate():
