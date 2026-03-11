@@ -22,6 +22,8 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 file_path="/home/mmk/projects/def-zonata/mmk/version_2/"
 checkpoint_dir="/home/mmk/projects/def-zonata/mmk/version_2/stage_2"
 llm_model_path="/home/mmk/projects/def-zonata/mmk/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/7a8c4e2e81eae20a606d811f475d7dc316dd916a"
+os.environ["TRANSFORMERS_OFFLINE"] = "1"
+os.environ["HF_HUB_OFFLINE"] = "1"
 
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response.jsonl')
 sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
@@ -29,7 +31,6 @@ sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
 tokenizer_path =os.path.join(file_path,'llm_tokenizer')
 tokenizer_modified = AutoTokenizer.from_pretrained(tokenizer_path)
 ###print(device) 
-file="synthetic data"
 
 ts_dataset=ts_textual(128,128,tokenizer_modified,sft_file,device=device)
 ts_loader =DataLoader(ts_dataset,batch_size=5,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer_modified))
@@ -50,7 +51,7 @@ class MultiModalInferenceEngine:
         
         # 2. Load Base LLM and Resize the input_embeddings
         self.base_model=AutoModelForCausalLM.from_pretrained(
-            self.model_path, 
+            self.model_path,local_files_only=True,trust_remote_code=True,
             torch_dtype=torch.bfloat16,
             low_cpu_mem_usage=True,
             device_map=None
@@ -191,14 +192,12 @@ class MultiModalInferenceEngine:
         assemb_embed_tensor.append(final_tensor)"""
         
         return final_container
-    
 
 conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
 
-## loop around batches to return and generate predictions
-
+## loop around batches to return and generate prediction
 engine.predict(ts_loader,max_new_tokens=100)
 
 ##save the response
