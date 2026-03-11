@@ -84,9 +84,9 @@ class MultiModalInferenceEngine:
         with open(self.output_file,'a',encoding='utf-8') as f:
             with torch.no_grad(): 
                 for batch in ts_loader:
-                    ts_input=batch['time_series']
-                    attn_mask=batch['attention_mask'] 
-                    input_ids=batch['input_ids']
+                    ts_input=batch['time_series'].to(self.device)
+                    attn_mask=batch['attention_mask'].to(self.device)
+                    input_ids=batch['input_ids'].to(self.device)
                     ts_pairs=batch['ts_pairs']
                     ts_seq_index=batch["ts_indices"]
                     textual_index=batch['textual_indices']
