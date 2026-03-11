@@ -166,7 +166,7 @@ class MultiModalInferenceEngine:
         ts_emb_dim=ts_embeddings.shape[3]
 
         ##ts_embeddings=ts_embeddings.view(bs*c_in,num_ts_tokens,-1)        
-        input_embeds=self.llm_model.get_input_embeddings()(input_ids) ##[bs,seq_len,d_emb]
+        input_embeds=self.model.get_input_embeddings()(input_ids) ##[bs,seq_len,d_emb]
         flat_ts_embeddings=ts_embeddings.view(-1,c_in*num_ts_tokens,ts_emb_dim)
 
         text_emb_dim= input_embeds.shape[2]
