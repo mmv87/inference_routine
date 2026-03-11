@@ -60,8 +60,8 @@ class MultiModalInferenceEngine:
         self.model.to(self.device).eval()
         
         # 4. Initialize and Load TS Encoder
-        self.ts_transformer=PatchTSTEncoder(patch_len=self.patch_len,n_layers=2,d_model=512,n_heads=8,
-                             shared_embedding=True,d_ff=1024,norm='Layer',attn_dropout=0.,dropout=0.1,activation='gelu',store_attn=False,res_attention=False,pre_norm=True,pe='zeros',learn_pe=True,verbose=False)
+        self.ts_transformer=PatchTSTEncoder(patch_len=self.patch_len,n_layers=2,d_model=512,n_heads=4,
+                             shared_embedding=False,d_ff=1024,norm='Layer',attn_dropout=0.,dropout=0.1,activation='gelu',store_attn=False,res_attention=False,pre_norm=True,pe='zeros',learn_pe=True,verbose=False)
         
         self.ts_conv_module=ConvFeatureExtraction(conv_layers,dropout=0.1)
         
@@ -69,7 +69,7 @@ class MultiModalInferenceEngine:
         self.ts_encoder=llm_projection(self.ts_conv_module,64,self.ts_transformer,512,1024,3072)
 
         # Loading from the state_dict saved during training
-        self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_encoder_ver2_final.pth"))
+        self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_encoder_ver2_final.pth"),strict=False)
         self.ts_encoder.to(self.device).eval()
         
     @torch.no_grad()
