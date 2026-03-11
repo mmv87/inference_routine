@@ -21,6 +21,7 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 file_path="/home/mmk/projects/def-zonata/mmk/version_2/"
 checkpoint_dir="/home/mmk/projects/def-zonata/mmk/version_2/stage_2"
+
 llm_model_path="/home/mmk/projects/def-zonata/mmk/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/7a8c4e2e81eae20a606d811f475d7dc316dd916a"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
@@ -50,12 +51,7 @@ class MultiModalInferenceEngine:
         ##self.ts_token_id = self.tokenizer.convert_tokens_to_ids("<ts>")
         
         # 2. Load Base LLM and Resize the input_embeddings
-        self.base_model=AutoModelForCausalLM.from_pretrained(
-            self.model_path,local_files_only=True,trust_remote_code=True,
-            torch_dtype=torch.bfloat16,
-            low_cpu_mem_usage=True,
-            device_map=None
-            )
+        self.base_model=AutoModelForCausalLM.from_pretrained(local_files_only=True,trust_remote_code=True)
         self.base_model.resize_token_embeddings(len(self.tokenizer))
         # 3. Load PEFT Adapters
         self.model = PeftModel.from_pretrained(self.base_model, f"{checkpoint_dir}/phi4-ts-adapter_ver2")
