@@ -85,7 +85,7 @@ class MultiModalInferenceEngine:
             with torch.no_grad(): 
                 for batch in ts_loader:
                     ts_input=batch['time_series']
-                    attn_mask=batch['attn_mask'] 
+                    attn_mask=batch['attention_mask'] 
                     input_ids=batch['input_ids']
                     ts_pairs=batch['ts_pairs']
                     ts_seq_index=batch["ts_indices"]
