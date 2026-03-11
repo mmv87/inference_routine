@@ -189,7 +189,7 @@ class MultiModalInferenceEngine:
         """final_tensor=ts_embeds_assemb+text_embeds_assemb
         assemb_embed_tensor.append(final_tensor)"""
         
-        return final_container
+        return final_container.to(self.device)
  
 conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
