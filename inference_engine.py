@@ -69,7 +69,7 @@ class MultiModalInferenceEngine:
         self.ts_encoder=llm_projection(self.ts_conv_module,64,self.ts_transformer,512,1024,3072)
 
         # Loading from the state_dict saved during training
-        self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_stage_2_ver_2.pth"))
+        self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_encoder_ver2_final.pth"))
         self.ts_encoder.to(self.device).eval()
         
     @torch.no_grad()
