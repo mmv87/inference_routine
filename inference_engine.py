@@ -151,6 +151,7 @@ class MultiModalInferenceEngine:
         final_embeds = torch.zeros((T_new, text_emb_dim), device=self.device, dtype=input_embeds.dtype)
         final_embeds.index_copy_(0, new_text_indices, curr_text_embeds)
         final_embeds.index_copy_(0, final_ts_indices, curr_ts_embeds)
+        final_embeds.to(self.device)
         ##print(f'input_embed_shape:{final_embeds.shape}')
         
         return final_embeds.unsqueeze(0)
@@ -167,7 +168,7 @@ class MultiModalInferenceEngine:
 
         ##ts_embeddings=ts_embeddings.view(bs*c_in,num_ts_tokens,-1)        
         input_embeds=self.model.get_input_embeddings()(input_ids) ##[bs,seq_len,d_emb]
-        flat_ts_embeddings=ts_embeddings.view(-1,c_in*num_ts_tokens,ts_emb_dim)
+        flat_ts_embeddings=ts_embeddings.view(-1,c_in*num_ts_tokens,ts_emb_dim).to(self.device)
 
         text_emb_dim= input_embeds.shape[2]
         assert (ts_emb_dim==text_emb_dim)
@@ -178,9 +179,9 @@ class MultiModalInferenceEngine:
         
         flat_text_embeddings=input_embeds
         ##get the indices after the <ts>....<ts/> placeholder is offseted
-        ts_indices=ts_token_idx.unsqueeze(-1).expand(-1, -1, text_emb_dim)
+        ts_indices=ts_token_idx.unsqueeze(-1).expand(-1, -1, text_emb_dim).to(self.device)
         ###ts_indices=ts_indices.expand(-1,text_emb_dim)
-        text_indices=text_token_idx.unsqueeze(-1).expand(-1, -1, text_emb_dim)
+        text_indices=text_token_idx.unsqueeze(-1).expand(-1, -1, text_emb_dim).to(self.device)
        ###text_indices=text_indices.expand(-1,text_emb_dim)
        
         final_container.scatter_(dim=1,index=ts_indices,src=flat_ts_embeddings)
