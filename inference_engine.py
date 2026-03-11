@@ -51,7 +51,7 @@ class MultiModalInferenceEngine:
         ##self.ts_token_id = self.tokenizer.convert_tokens_to_ids("<ts>")
         
         # 2. Load Base LLM and Resize the input_embeddings
-        self.base_model=AutoModelForCausalLM.from_pretrained(local_files_only=True,trust_remote_code=True)
+        self.base_model=AutoModelForCausalLM.from_pretrained(self.model_path,local_files_only=True,trust_remote_code=True)
         self.base_model.resize_token_embeddings(len(self.tokenizer))
         # 3. Load PEFT Adapters
         self.model = PeftModel.from_pretrained(self.base_model, f"{checkpoint_dir}/phi4-ts-adapter_ver2")
