@@ -4,7 +4,7 @@ from modules.ts_encoder import llm_projection
 from peft import PeftModel
 from transformers import AutoModelForCausalLM,AutoTokenizer
 from ts_dataloader import ts_textual,collate_func
-from torch.utils import Dataset,DataLoader
+from torch.utils.data import Dataset,DataLoader
 import torch
 import json
 import os
