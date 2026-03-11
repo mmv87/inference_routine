@@ -22,7 +22,8 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 file_path="/home/mmk/projects/def-zonata/mmk/version_2/"
 checkpoint_dir="/home/mmk/projects/def-zonata/mmk/version_2/stage_2"
 
-llm_model_path="/home/mmk/projects/def-zonata/mmk/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/7a8c4e2e81eae20a606d811f475d7dc316dd916a"
+model_path="/home/mmk/projects/def-zonata/mmk/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/7a8c4e2e81eae20a606d811f475d7dc316dd916a"
+llm_model_path = os.path.abspath(model_path)
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
@@ -188,14 +189,13 @@ class MultiModalInferenceEngine:
         assemb_embed_tensor.append(final_tensor)"""
         
         return final_container
-
+ 
 conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
 
 ## loop around batches to return and generate prediction
 engine.predict(ts_loader,max_new_tokens=100)
-
 ##save the response
 """"
     for i, text in enumerate():
