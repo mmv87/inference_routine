@@ -27,7 +27,7 @@ llm_model_path = os.path.abspath(model_path)
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
-res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response.jsonl')
+res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response_batch_1.jsonl')
 sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
 
 tokenizer_path =os.path.join(file_path,'llm_tokenizer')
@@ -35,7 +35,7 @@ tokenizer_modified = AutoTokenizer.from_pretrained(tokenizer_path)
 ###print(device) 
 
 ts_dataset=ts_textual(128,128,tokenizer_modified,sft_file,device=device)
-ts_loader =DataLoader(ts_dataset,batch_size=5,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer_modified))
+ts_loader =DataLoader(ts_dataset,batch_size=1,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer_modified))
 
 class MultiModalInferenceEngine:
     def __init__(self,output_file,model_path,patch_len,conv_layers,tokenizer,checkpoint_dir=None,device=device):
@@ -113,7 +113,7 @@ class MultiModalInferenceEngine:
                     )
                     
                     responses=self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
-                    print(f'Responsed:{responses}')
+                    ##print(f'Responsed:{responses}')
                 
                     for i, text in enumerate(responses):
                         record={"sample_id": f'sample{i}', 
