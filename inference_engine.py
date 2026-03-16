@@ -85,6 +85,7 @@ class MultiModalInferenceEngine:
         # batch of outputs (BS=5, N, Max_Ch, P)
         with open(self.output_file,'a',encoding='utf-8') as f:
             with torch.no_grad(): 
+                response_list=[]
                 for batch in ts_loader:
                     ts_input=batch['time_series'].to(self.device)
                     attn_mask=batch['attention_mask'].to(self.device)
@@ -114,16 +115,19 @@ class MultiModalInferenceEngine:
                         temperature=0.1
                     )
                     
+                    ##modify for the batch_size of 1
+                    ###responsed=self.self.tokenizer.decode()
                     responses=self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
+                    response_list.append(responses[0])
                     ##print(f'Responsed:{responses}')
                 
-                    for i, text in enumerate(responses):
-                        record={"sample_id": f'sample{i}', 
-                                "prediction": text.strip()
-                                }
-                        # Write as a single line JSON (the 'l' in jsonl)
-                        f.write(json.dumps(record) + "\n")
-                        print('file_written')
+                for i, text in enumerate(response_list):
+                    record={"sample_id": f'sample{i}', 
+                            "prediction": text.strip()
+                            }
+                    # Write as a single line JSON (the 'l' in jsonl)
+                    f.write(json.dumps(record) + "\n")
+                    print('file_written')
                         
         
     def _assemble_inference_embeds(self, input_ids, ts_embeddings, ts_pairs):
@@ -199,7 +203,7 @@ conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
 ## loop around batches to return and generate prediction
-engine.predict(ts_loader,max_new_tokens=250)
+engine.predict(ts_loader,max_new_tokens=200)
 
 ##save the response
 """"
