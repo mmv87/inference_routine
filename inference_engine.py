@@ -28,7 +28,7 @@ llm_model_path = os.path.abspath(model_path)
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
-res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response_batch_1.jsonl')
+res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response_batch_eval_b.jsonl')
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],'dataset_b.json')
 
@@ -198,7 +198,6 @@ class MultiModalInferenceEngine:
 conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
-
 ## loop around batches to return and generate prediction
 engine.predict(ts_loader,max_new_tokens=250)
 ##save the response
