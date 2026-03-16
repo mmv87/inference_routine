@@ -30,11 +30,13 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response_batch_1.jsonl')
 sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
 
+eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],'dataset_b.jsonl')
+
 tokenizer_path =os.path.join(file_path,'llm_tokenizer')
 tokenizer_modified = AutoTokenizer.from_pretrained(tokenizer_path)
 ###print(device) 
 
-ts_dataset=ts_textual(128,128,tokenizer_modified,sft_file,device=device)
+ts_dataset=ts_textual(128,128,tokenizer_modified,eval_data_set,device=device)
 ts_loader =DataLoader(ts_dataset,batch_size=1,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer_modified))
 
 class MultiModalInferenceEngine:
@@ -198,7 +200,7 @@ conv_layers =[(128,5,1),(64,3,1)]
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
 
 ## loop around batches to return and generate prediction
-engine.predict(ts_loader,max_new_tokens=500)
+engine.predict(ts_loader,max_new_tokens=100)
 ##save the response
 """"
     for i, text in enumerate():
