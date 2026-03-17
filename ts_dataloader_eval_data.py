@@ -52,10 +52,16 @@ class ts_textual(Dataset):
         self.file=file
         self.device =device
         self.dataset=[]
-        ###modify to .jsonl format
-        with open(self.file,'r',encoding='utf-8') as f:
-            for line in f:
-                self.dataset.append(json.loads(line))
+        
+        ##for .json file
+        if self.file.endswith(".json"):
+            with open(self.file,'r',encoding='utf-8') as f:
+                self.dataset=json.load(self.file)
+        else:
+            ###modify to .jsonl format
+            with open(self.file,'r',encoding='utf-8') as f:
+                for line in f:
+                    self.dataset.append(json.loads(line))
             ###self.dataset.append(obj)
         
         ##self.sliced_data=self.dataset[:100]
@@ -281,10 +287,7 @@ class ts_textual(Dataset):
         
         input_ids=self.tokenizer(input,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
         ##print(f'original_text_ids:{input_ids.shape}')
-        ###output_ids=self.tokenizer(output,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
-        ##print(f'test_output_ids:{output_ids}')
-        ###combined_ids=torch.cat([input_ids,output_ids],dim=0)
-        ###print(f'total_textual:{combined_ids.shape}')
+        
         ts_norm,meta_prompt=self.sp_encoding(timeseries)
         ###print(f'ts_norm :{type(ts_norm),len(ts_norm)}')
         ts_patched = self.pad_and_patchify(ts_norm,self.patch_len,self.stride)
