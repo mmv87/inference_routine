@@ -57,9 +57,9 @@ class ts_textual(Dataset):
             ###self.dataset.append(obj)
         
         
-        self.sliced_data=self.dataset[:100]
+        ##self.sliced_data=self.dataset[:100]
     def __len__(self):
-        return len(self.sliced_data)
+        return len(self.dataset)
     
     def pad_and_patchify(self,ts_input:list,p,s):
         seq_len_list=[]
@@ -275,8 +275,8 @@ class ts_textual(Dataset):
             line =file.readline()
             sample =json.loads(line)
             """
-        input = self.sliced_data[idx]['question']
-        timeseries=self.sliced_data[idx]['timeseries'] ###list of lists
+        input = self.dataset[idx]['question']
+        timeseries=self.dataset[idx]['timeseries'] ###list of lists
         
         input_ids=self.tokenizer(input,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
         ##print(f'original_text_ids:{input_ids.shape}')
