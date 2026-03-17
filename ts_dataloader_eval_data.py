@@ -52,10 +52,11 @@ class ts_textual(Dataset):
         self.file=file
         self.device =device
         self.dataset=[]
+        ###modify to .jsonl format
         with open(self.file,'r',encoding='utf-8') as f:
-            self.dataset=json.load(f)
+            for line in f:
+                self.dataset.append(json.loads(line))
             ###self.dataset.append(obj)
-        
         
         ##self.sliced_data=self.dataset[:100]
     def __len__(self):
