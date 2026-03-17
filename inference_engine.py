@@ -30,7 +30,7 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response_batch_eval_b.jsonl')
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
-eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],'dataset_b.json')
+eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],'dataset_b_cleaned.jsonl')
 
 tokenizer_path =os.path.join(file_path,'llm_tokenizer')
 tokenizer_modified = AutoTokenizer.from_pretrained(tokenizer_path)
