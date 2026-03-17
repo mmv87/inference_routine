@@ -28,7 +28,7 @@ llm_model_path = os.path.abspath(model_path)
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
-res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response_batch_eval_b.jsonl')
+res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response_batch_eval_a.jsonl')
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],'dataset_a.json')
 
