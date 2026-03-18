@@ -55,8 +55,8 @@ class ts_textual(Dataset):
         
         ##for .json file
         if self.file.endswith(".json"):
-            with open(self.file,'r',encoding='utf-8') as f:
-                self.dataset=json.load(f)
+            with open(self.file,'r',encoding='utf-8') as file:
+                self.dataset=json.load(file)
         else:
             ###modify to .jsonl format
             with open(self.file,'r',encoding='utf-8') as f:
