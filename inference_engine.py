@@ -29,7 +29,7 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
-eval_file='uni_global.jsonl'
+eval_file='uni_local.jsonl'
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.jsonl')
 
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
@@ -122,12 +122,12 @@ class MultiModalInferenceEngine:
                     ##print(f'Responsed:{responses}')
                 
                 for i, text in enumerate(response_list):
-                    record={"sample_id": f'sample{i}', 
-                            "prediction": text.strip()
+                    record={"sample_id": f'sample{i+1}', 
+                            "prediction":text.strip()
                             }
                     # Write as a single line JSON (the 'l' in jsonl)
                     f.write(json.dumps(record)+"\n")
-                    print('file_written')
+                ###print('file_written')
                         
         
     def _assemble_inference_embeds(self, input_ids, ts_embeddings, ts_pairs):
