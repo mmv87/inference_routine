@@ -57,8 +57,8 @@ class MultiModalInferenceEngine:
         self.base_model.resize_token_embeddings(len(self.tokenizer))
         # 3. Load PEFT Adapters
         self.model = PeftModel.from_pretrained(self.base_model, f"{checkpoint_dir}/phi4-ts-adapter_ver2")
-        self.model = self.model.merge_and_unload()
-        self.model.to(self.device).eval()
+        self.model_merged = self.model.merge_and_unload()
+        self.model_merged.to(self.device).eval()
         
         # 4. Initialize and Load TS Encoder
         self.ts_transformer=PatchTSTEncoder(patch_len=self.patch_len,n_layers=2,d_model=512,n_heads=4,
@@ -70,6 +70,7 @@ class MultiModalInferenceEngine:
         self.ts_encoder=llm_projection(self.ts_conv_module,64,self.ts_transformer,512,1024,3072)
 
         # Loading from the state_dict saved during training
+        
         self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_encoder_ver2_final.pth"),strict=False)
         self.ts_encoder.to(self.device).eval()
         
@@ -102,7 +103,7 @@ class MultiModalInferenceEngine:
                     print(f'input_embeds:{input_embeds.shape}')
 
                 # --- Generation of batch of prediced tokens
-                    output_ids = self.model.generate(
+                    output_ids = self.model_merged.generate(
                         inputs_embeds=input_embeds,
                         attention_mask=attn_mask,
                         max_new_tokens=max_new_tokens,

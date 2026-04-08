@@ -20,8 +20,6 @@ tokenizer_modified = AutoTokenizer.from_pretrained(tokenizer_path)
 ##self.ts_encoder=ts_encoder_mlp(self.max_patches,self.max_channel,self.P,self.embed_size,device=self.device)
 
 device ='cuda' if torch.cuda.is_available() else 'cpu'
-
-
 ###step-1 : synthetic data generation
 ### step-2 : preprocess the data to set the pipeline for the ts_encoder
 import numpy as np
@@ -149,7 +147,7 @@ ts_data,label=inject_point_anomalies(raw_ts_data, n_anomalies=5, magnitude=10)
 print(type(ts_data))
 sample_data['timeseries']=ts_data
 sample_data['prompt']="""<|system|>You are a time series analyst<|end|> 
-<|user|>The following timeseries data reports the'sales' of company collected over 675 timesteps <ts><ts/>.Generate a summary on the timeseries data in terms of noise ,trend and periodicty<|end|><|assistant|><|thought|>"""
+<|user|>The following timeseries data reports the'sales' of company collected over 675 timesteps <ts><ts/>.Generate a summary on the timeseries data in terms of noise,trend and periodicty<|end|><|assistant|><|thought|>"""
 
 processed_sample=preprocess_data(sample_data)
 ##print(processed_sample)

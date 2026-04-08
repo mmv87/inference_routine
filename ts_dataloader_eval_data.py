@@ -52,7 +52,7 @@ class ts_textual(Dataset):
         self.file=file
         self.device =device
         self.dataset=[]
-        
+    
         ##for .json file
         if self.file.endswith(".json"):
             with open(self.file,'r',encoding='utf-8') as file:
@@ -326,7 +326,6 @@ def collate_func(batch,tokenizer=None):
     ###assembler helper vars
     ts_indices =[x['ts_indices'] for x in batch] 
     text_indices=[x['text_indices'] for x in batch]
-    
     
     return{
         'input_ids':torch.cat(input_ids), ### since it has to be shape[bs,seq_len]
