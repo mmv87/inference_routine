@@ -28,9 +28,11 @@ llm_model_path = os.path.abspath(model_path)
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
-res_file=os.path.join(os.environ["SLURM_TMPDIR"],'response_batch_eval_a.jsonl')
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
-eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],'dataset_a.json')
+eval_file='uni_global.jsonl'
+res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.jsonl')
+
+eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
 tokenizer_path =os.path.join(file_path,'llm_tokenizer')
 tokenizer_modified = AutoTokenizer.from_pretrained(tokenizer_path)
 ###print(device) 
@@ -76,10 +78,8 @@ class MultiModalInferenceEngine:
         
     @torch.no_grad()
     def predict(self,ts_loader:DataLoader,max_new_tokens=100):
-        
         """text_query: "The signal is <ts> <ts/>. What is the trend?"
         padded_ts_input: List of tensors, each (max_patches, patch_length)"""
-        
         ###responses =[]
         # --- Preprocessed data object---
         # batch of outputs (BS=5, N, Max_Ch, P)
@@ -114,7 +114,7 @@ class MultiModalInferenceEngine:
                         ##num_beams=3,
                         temperature=0.1
                     )
-                    
+
                     ##modify for the batch_size of 1
                     ###responsed=self.self.tokenizer.decode()
                     responses=self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
@@ -126,7 +126,7 @@ class MultiModalInferenceEngine:
                             "prediction": text.strip()
                             }
                     # Write as a single line JSON (the 'l' in jsonl)
-                    f.write(json.dumps(record) + "\n")
+                    f.write(json.dumps(record)+"\n")
                     print('file_written')
                         
         
@@ -203,7 +203,7 @@ conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
 ## loop around batches to return and generate prediction
-engine.predict(ts_loader,max_new_tokens=250)
+engine.predict(ts_loader,max_new_tokens=250) ### .predict executes 
 
 ##save the response
 """"

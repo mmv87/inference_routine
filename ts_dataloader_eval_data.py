@@ -335,6 +335,8 @@ def collate_func(batch,tokenizer=None):
         "ts_indices":torch.stack(ts_indices),
         "textual_indices":torch.stack(text_indices),
         "ts_pairs":torch.stack(ts_pairs)}   ##list of tensor (bs,max_N,Patch_len)
+    
+    
 ###dataset=ts_textual(128,128,_json_path,tokenizer_modified,device=device,model_dtype=None)
 ##dataloader
 """dataset_for_test=ts_textual(128,128,tokenizer,eval_dataset,device=device)
