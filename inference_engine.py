@@ -29,7 +29,7 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
-eval_file='uni_local.jsonl'
+eval_file='multi_local.jsonl'
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.jsonl')
 
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
@@ -198,7 +198,6 @@ class MultiModalInferenceEngine:
         assemb_embed_tensor.append(final_tensor)"""
         
         return final_container.to(self.device)
- 
 conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
