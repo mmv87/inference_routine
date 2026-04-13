@@ -336,7 +336,7 @@ def collate_func(batch,tokenizer=None):
     
     return{
         'input_ids':torch.cat(input_ids),
-        "labels":torch.stack(labels_batch),
+        ##"labels":torch.stack(labels_batch),
         'attention_mask':torch.stack(attention_mask_batch),
         "time_series":torch.stack(padded_ts_data),
         "ts_indices":torch.stack(ts_indices),
