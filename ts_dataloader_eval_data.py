@@ -237,10 +237,10 @@ class ts_textual(Dataset):
             
             ##print(f'meta_shape{meta_prompt_tokens.shape}')
             meta_prompts.append(meta_prompt_tokens)
-            # Stack with structural cue (1.0)
-            result_timeseries = np.stack([scaled_timeseries, np.ones_like(scaled_timeseries)], axis=-1).reshape(-1,1)
+            # Stack with structural cue (1.0) without structural cue
+            ##result_timeseries = np.stack([scaled_timeseries, np.ones_like(scaled_timeseries)], axis=-1).reshape(-1,1)
             ###print(result_timeseries)
-            list_ts=result_timeseries.tolist()
+            list_ts=scaled_timeseries.tolist()
             ###print(f'list_ts:{len(list_ts)}')
             timeseries_list.append(list_ts)
             
