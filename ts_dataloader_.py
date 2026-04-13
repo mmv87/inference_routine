@@ -326,7 +326,7 @@ class ts_textual(Dataset):
 ###collate function
 def collate_func(batch,tokenizer=None):
     input_ids = [x['input_ids'] for x in batch]
-    labels_batch=[x['labels'] for x in batch]
+    ##labels_batch=[x['labels'] for x in batch]
     attention_mask_batch=[x['attention_mask'] for x in batch]
     padded_ts_data=[x['ts_input'] for x in batch] 
     ts_pairs=[x['ts_pairs'] for x in batch]
