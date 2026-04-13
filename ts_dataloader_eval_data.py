@@ -52,7 +52,6 @@ class ts_textual(Dataset):
         self.file=file
         self.device =device
         self.dataset=[]
-    
         ##for .json file
         if self.file.endswith(".json"):
             with open(self.file,'r',encoding='utf-8') as file:
@@ -63,11 +62,10 @@ class ts_textual(Dataset):
                 for line in f:
                     self.dataset.append(json.loads(line))
             ###self.dataset.append(obj)
-        
+            
         ##self.sliced_data=self.dataset[:100]
     def __len__(self):
-        return len(self.dataset)
-    
+        return len(self.dataset)   
     def pad_and_patchify(self,ts_input:list,p,s):
         seq_len_list=[]
         pad_pattern=torch.tensor([0.0,0.0],dtype=torch.float16)
@@ -191,10 +189,8 @@ class ts_textual(Dataset):
                 ts_position.append(('start',i))
             elif (token_id==ts_end_token):
                 ts_position.append(('end',i))
-                
         stack =[]
         ts_pairs=[]
-        
         for j in range(len(ts_position)):
             pos,idx = ts_position[j]
             if pos=='start':
@@ -264,7 +260,6 @@ class ts_textual(Dataset):
             # Get the specific meta_prompt for this channel/pair
             meta = meta_prompts[i]
             meta_len = meta.shape[1]
-            ##print(f'meta_prompt_len:{meta_len}')
             # Perform Splice
             if torch.is_tensor(result):
                 result = torch.cat([result[:,:actual_pos],meta,result[:,actual_pos:]],dim=1)
@@ -277,6 +272,7 @@ class ts_textual(Dataset):
         return result,result.shape[1]
         
     def __getitem__(self,idx):
+        
         """with open(self.file,'rb') as file:
             file.seek(self.byte_offset[idx])
             line =file.readline()
@@ -284,10 +280,9 @@ class ts_textual(Dataset):
             """
         input = self.dataset[idx]['question']
         timeseries=self.dataset[idx]['timeseries'] ###list of lists
-        
         input_ids=self.tokenizer(input,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
-        ##print(f'original_text_ids:{input_ids.shape}')
         
+        ##print(f'original_text_ids:{input_ids.shape}')
         ts_norm,meta_prompt=self.sp_encoding(timeseries)
         ###print(f'ts_norm :{type(ts_norm),len(ts_norm)}')
         ts_patched = self.pad_and_patchify(ts_norm,self.patch_len,self.stride)
@@ -301,10 +296,8 @@ class ts_textual(Dataset):
         ###print(f'ts_start:{ts_start}')
         new_text_prompt,total_text_tokens=self.insert_meta_prompt(input_ids,meta_prompt,ts_start)
         print(f'textual_ids:{new_text_prompt.shape}')
-
         assert len(ts_pairs)==ch
         ts_tokens,text_tokens,total_tokens=self._calculate_ts_indices(ts_pairs,ch,N,total_text_tokens)
-        
         attention_mask=torch.ones(total_tokens,dtype=torch.long,device=self.device)
         ##attention_mask_batch.append(attention_mask)
         ##ts_pair_indices   

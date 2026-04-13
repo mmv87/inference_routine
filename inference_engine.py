@@ -29,7 +29,7 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
-eval_file='multi_local.jsonl'
+eval_file='uni_global.jsonl'
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.jsonl')
 
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
@@ -53,7 +53,6 @@ class MultiModalInferenceEngine:
         ###load the expanded tokenizer
         self.tokenizer=tokenizer
         ##self.ts_token_id = self.tokenizer.convert_tokens_to_ids("<ts>")
-        
         # 2. Load Base LLM and Resize the input_embeddings
         self.base_model=AutoModelForCausalLM.from_pretrained(self.model_path,local_files_only=True)
         self.base_model.resize_token_embeddings(len(self.tokenizer))
