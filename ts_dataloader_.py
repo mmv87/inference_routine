@@ -108,7 +108,7 @@ class ts_textual(Dataset):
             # Update the offset for the NEXT iteration
             current_offset += meta_len
         
-        print(f'total_textual_len:{result.shape[1]}')
+        ##print(f'total_textual_len:{result.shape[1]}')
         return result,result.shape[1]
     
     def pad_and_patchify(self,ts_input:list,p,s):

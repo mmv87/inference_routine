@@ -99,7 +99,7 @@ class MultiModalInferenceEngine:
                 # --- Assemble Embeddings ---
                 # Use refined assembly logic (handling the 10 tokens per channel)
                     input_embeds = self.v2_assemble_input_embeds(input_ids,ts_embedding,ts_seq_index,textual_index,ts_pairs)
-                    print(f'input_embeds:{input_embeds.shape}')
+                    ##print(f'input_embeds:{input_embeds.shape}')
 
                 # --- Generation of batch of prediced tokens
                     output_ids = self.model_merged.generate(
@@ -126,7 +126,7 @@ class MultiModalInferenceEngine:
                             }
                     # Write as a single line JSON (the 'l' in jsonl)
                     f.write(json.dumps(record)+"\n")
-                ###print('file_written')
+                print('file_written')
                         
         
     def _assemble_inference_embeds(self, input_ids, ts_embeddings, ts_pairs):
