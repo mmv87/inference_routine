@@ -20,8 +20,8 @@ import os
  ##llm_model.generate() using the input_embeds
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-file_path="/home/mmk/projects/def-zonata/mmk/version_2/"
-checkpoint_dir="/home/mmk/projects/def-zonata/mmk/version_2/stage_2"
+file_path="/home/mmk/projects/def-zonata/mmk/version_3/stage_1_training"
+checkpoint_dir="/home/mmk/projects/def-zonata/mmk/version_3/stage_2_training"
 
 model_path="/home/mmk/projects/def-zonata/mmk/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/7a8c4e2e81eae20a606d811f475d7dc316dd916a"
 llm_model_path = os.path.abspath(model_path)
