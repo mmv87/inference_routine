@@ -34,11 +34,15 @@ res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.j
 
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
 tokenizer_path =os.path.join(file_path,'llm_tokenizer')
-tokenizer_modified = AutoTokenizer.from_pretrained(tokenizer_path)
+
+tokenizer = AutoTokenizer.from_pretrained(model_path,local_files_only=True)
+special_token_dict={'pad_token':"<|pad|>","additional_special_tokens":['<ts>','<ts/>']}
+tokenizer.add_special_tokens(special_token_dict)
+###model.resize_token_embeddings(len(tokenizer))
 ###print(device) 
 
-ts_dataset=ts_textual(128,128,tokenizer_modified,eval_data_set,device=device)
-ts_loader =DataLoader(ts_dataset,batch_size=1,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer_modified))
+ts_dataset=ts_textual(128,128,tokenizer,eval_data_set,device=device)
+ts_loader =DataLoader(ts_dataset,batch_size=1,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer))
 
 class MultiModalInferenceEngine:
     def __init__(self,output_file,model_path,patch_len,conv_layers,tokenizer,checkpoint_dir=None,device=device):
@@ -69,9 +73,7 @@ class MultiModalInferenceEngine:
         
         ###main ts_encoder
         self.ts_encoder=llm_projection(self.ts_conv_module,64,self.ts_transformer,512,1024,3072)
-
         # Loading from the state_dict saved during training
-        
         self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_encoder_ver2_final.pth"),strict=False)
         self.ts_encoder.to(self.device).eval()
         
@@ -190,7 +192,6 @@ class MultiModalInferenceEngine:
         ###ts_indices=ts_indices.expand(-1,text_emb_dim)
         text_indices=text_token_idx.unsqueeze(-1).expand(-1, -1, text_emb_dim).to(self.device)
        ###text_indices=text_indices.expand(-1,text_emb_dim)
-       
         final_container.scatter_(dim=1,index=ts_indices,src=flat_ts_embeddings)
         final_container.scatter_(dim=1,index=text_indices,src=flat_text_embeddings)
         """final_tensor=ts_embeds_assemb+text_embeds_assemb
@@ -199,7 +200,7 @@ class MultiModalInferenceEngine:
         return final_container.to(self.device)
 conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
-engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer_modified,checkpoint_dir=checkpoint_dir,device=device)
+engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer,checkpoint_dir=checkpoint_dir,device=device)
 ## loop around batches to return and generate prediction
 engine.predict(ts_loader,max_new_tokens=250) ### .predict executes 
 
