@@ -29,7 +29,7 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
-eval_file='multi_global.jsonl'
+eval_file='uni_global.jsonl'
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.jsonl')
 
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
@@ -76,7 +76,7 @@ class MultiModalInferenceEngine:
         self.ts_encoder.to(self.device).eval()
         
     @torch.no_grad()
-    def predict(self,ts_loader:DataLoader,max_new_tokens=100):
+    def predict(self,ts_loader:DataLoader,max_new_tokens=500):
         """text_query: "The signal is <ts> <ts/>. What is the trend?"
         padded_ts_input: List of tensors, each (max_patches, patch_length)"""
         ###responses =[]
@@ -95,7 +95,7 @@ class MultiModalInferenceEngine:
                     # Encode TS
                     # ts_embedding output: (bs, max_ch, max_patches, d_model)
                     ts_embedding = self.ts_encoder(ts_input)
-                
+                    
                 # --- Assemble Embeddings ---
                 # Use refined assembly logic (handling the 10 tokens per channel)
                     input_embeds = self.v2_assemble_input_embeds(input_ids,ts_embedding,ts_seq_index,textual_index,ts_pairs)

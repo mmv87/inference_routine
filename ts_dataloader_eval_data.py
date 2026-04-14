@@ -182,7 +182,7 @@ class ts_textual(Dataset):
         ts_start_token=self.tokenizer.convert_tokens_to_ids('<ts>')
         ts_end_token=self.tokenizer.convert_tokens_to_ids('<ts/>')
         ts_position=[]
-    
+                                                                                                                                                  
         ##data structure to save the <ts>,<ts/> tokens ,list of tuples
         for i,token_id in enumerate(tokenized.tolist()):
             if (token_id==ts_start_token):
