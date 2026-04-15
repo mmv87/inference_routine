@@ -11,6 +11,7 @@ from transformers import AutoModelForCausalLM,AutoTokenizer
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 device ='cuda' if torch.cuda.is_available() else 'cpu'
+
 """
 abs_modelpath="D:/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/0e3b1e2d02ee478a3743abe3f629e9c0cb722e0a"
 ##print('path_read')
@@ -18,10 +19,10 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 model_name='./hub/microsoft/phi-4-mini-reasoning'
 device ='cpu'
-print(device)
-model=AutoModelForCausalLM.from_pretrained(abs_modelpath,local_files_only=True)
-model.to(device)
-tokenizer=AutoTokenizer.from_pretrained(abs_modelpath,local_file_only=True)"""
+print(device)"""
+"""model=AutoModelForCausalLM.from_pretrained(abs_modelpath,local_files_only=True)
+model.to(device)"""
+###tokenizer=AutoTokenizer.from_pretrained(abs_modelpath,local_file_only=True)
 """
 input_text='The following timeseries in the model'
 tokenized = tokenizer(input_text,return_tensors='pt',add_special_tokens=False)['input_ids'][0]"""
@@ -31,6 +32,7 @@ special_token_dict={'pad_token':"<|pad|>","additional_special_tokens":['<ts>','<
 tokenizer.add_special_tokens(special_token_dict)"""
 ##align_256_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/align_256/train.jsonl'"""
 ##univar_eval="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/uni_local.jsonl"
+##multi_local_eval="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/multi_local.jsonl"
 ###sft_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/sft/sft_train.jsonl'"""
 ##print(align_256_file)
 ## Dataset class to get the pipeline for a sample
@@ -252,11 +254,9 @@ class ts_textual(Dataset):
             if (token_id==ts_start_token):
                 ts_position.append(('start',i))
             elif (token_id==ts_end_token):
-                ts_position.append(('end',i))
-                
+                ts_position.append(('end',i))   
         stack =[]
         ts_pairs=[]
-        
         for j in range(len(ts_position)):
             pos,idx = ts_position[j]
             if pos=='start':
@@ -292,20 +292,25 @@ class ts_textual(Dataset):
             line =file.readline()
             sample =json.loads(line)"""
         input = self.dataset[idx]['question']
+        print(input)
+        
         ###output = self.dataset[idx]['output']
         timeseries=self.dataset[idx]['timeseries'] ###list of lists
-        messages = [
-            {"role": "system", "content": "You are time series expert."},
-            {"role": "user", "content": f"{input}"}
+        prompt=f"<|system|> You are timeseries analyst<|end|><|user|>{input}<|end|><|assistant|><|thought|>"
+        ##print(prompt)
+        """messages = [
+            {"role": "system", "content": "You are time series expert and answer the following question based on the timeseries provided"},
+            {"role": "user", "content":f'{input}'}
         ]
         input_ids = self.tokenizer.apply_chat_template(
             messages, 
             tokenize=True, 
             add_generation_prompt=True,
             return_tensors="pt"
-        ).squeeze(0)
+        ).squeeze(0)"""
         
-        #input_ids=self.tokenizer(input,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
+        input_ids=self.tokenizer(prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
+        ###print(f'input_ids:{input_ids}')
         ##output_ids=self.tokenizer(output,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
         ###total_textual_ids
         ###combined_ids=torch.cat([input_ids,output_ids],dim=0)
@@ -313,6 +318,7 @@ class ts_textual(Dataset):
         ##normalize the ts_data
         norm_ts,meta_prompt = self.sp_encoding(timeseries)
         ts_pairs,text_tokens_pre_meta_prompt=self.ts_pair_indices(input_ids)
+        ###print(ts_pairs)
         ts_start=torch.tensor(ts_pairs)[:,0]        
         new_text_tokens,total_text_tokens=self.insert_meta_prompt(input_ids,meta_prompt,ts_start)
         ###print(f'total_textual:{new_text_tokens.shape}')
@@ -354,12 +360,10 @@ def collate_func(batch,tokenizer=None):
         "textual_indices":torch.stack(text_indices),
         "ts_pairs":torch.stack(ts_pairs)}   ##list of tensor (bs,max_N,Patch_len)
     
-    
-"""
-dataset_for_test=ts_textual(128,128,tokenizer,univar_eval,device=device)
+"""   
+dataset_for_test=ts_textual(128,128,tokenizer,multi_local_eval,device=device)
 dataloader=DataLoader(dataset_for_test,batch_size=1,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer))
 ###input_embeds = model.get_input_embeddings()
-
 for idx,batch in enumerate(dataloader):
     if idx<5:
         print(batch['time_series'].shape)
