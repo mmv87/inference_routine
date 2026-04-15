@@ -11,7 +11,6 @@ from transformers import AutoModelForCausalLM,AutoTokenizer
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 device ='cuda' if torch.cuda.is_available() else 'cpu'
-
 """
 abs_modelpath="D:/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/0e3b1e2d02ee478a3743abe3f629e9c0cb722e0a"
 ##print('path_read')
@@ -22,14 +21,11 @@ device ='cpu'
 print(device)"""
 """model=AutoModelForCausalLM.from_pretrained(abs_modelpath,local_files_only=True)
 model.to(device)"""
-###tokenizer=AutoTokenizer.from_pretrained(abs_modelpath,local_file_only=True)
-"""
-input_text='The following timeseries in the model'
-tokenized = tokenizer(input_text,return_tensors='pt',add_special_tokens=False)['input_ids'][0]"""
-###add special_tokens to the tokenizer
-"""
+
+"""tokenizer=AutoTokenizer.from_pretrained(abs_modelpath,local_file_only=True)
 special_token_dict={'pad_token':"<|pad|>","additional_special_tokens":['<ts>','<ts/>']}
 tokenizer.add_special_tokens(special_token_dict)"""
+
 ##align_256_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/align_256/train.jsonl'"""
 ##univar_eval="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/uni_local.jsonl"
 ##multi_local_eval="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/multi_local.jsonl"
@@ -243,12 +239,12 @@ class ts_textual(Dataset):
         return ts_patched       
     
     def ts_pair_indices(self,tokenized):
+        
         """tokenized= self.tokenizer(prompt,return_tensors='pt',add_special_tokens=False)
         input_ids= tokenized['input_ids'][0]"""
         ts_start_token=self.tokenizer.convert_tokens_to_ids('<ts>')
         ts_end_token=self.tokenizer.convert_tokens_to_ids('<ts/>')
         ts_position=[]
-    
         ##data structure to save the <ts>,<ts/> tokens ,list of tuples
         for i,token_id in enumerate(tokenized.tolist()):
             if (token_id==ts_start_token):
@@ -292,8 +288,7 @@ class ts_textual(Dataset):
             line =file.readline()
             sample =json.loads(line)"""
         input = self.dataset[idx]['question']
-        print(input)
-        
+        #print(input)
         ###output = self.dataset[idx]['output']
         timeseries=self.dataset[idx]['timeseries'] ###list of lists
         prompt=f"<|user|>{input}<|end|><|assistant|><|thought|>"
@@ -310,15 +305,11 @@ class ts_textual(Dataset):
         ).squeeze(0)"""
         
         input_ids=self.tokenizer(prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
-        ###print(f'input_ids:{input_ids}')
-        ##output_ids=self.tokenizer(output,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
-        ###total_textual_ids
-        ###combined_ids=torch.cat([input_ids,output_ids],dim=0)
-        ##print(combined_ids.shape)
+        #print(f'input_ids:{input_ids}')
         ##normalize the ts_data
         norm_ts,meta_prompt = self.sp_encoding(timeseries)
         ts_pairs,text_tokens_pre_meta_prompt=self.ts_pair_indices(input_ids)
-        ###print(ts_pairs)
+        print(ts_pairs)
         ts_start=torch.tensor(ts_pairs)[:,0]        
         new_text_tokens,total_text_tokens=self.insert_meta_prompt(input_ids,meta_prompt,ts_start)
         ###print(f'total_textual:{new_text_tokens.shape}')
@@ -359,8 +350,8 @@ def collate_func(batch,tokenizer=None):
         "ts_indices":torch.stack(ts_indices),
         "textual_indices":torch.stack(text_indices),
         "ts_pairs":torch.stack(ts_pairs)}   ##list of tensor (bs,max_N,Patch_len)
-    
-"""   
+
+"""
 dataset_for_test=ts_textual(128,128,tokenizer,multi_local_eval,device=device)
 dataloader=DataLoader(dataset_for_test,batch_size=1,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer))
 ###input_embeds = model.get_input_embeddings()
