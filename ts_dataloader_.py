@@ -296,7 +296,7 @@ class ts_textual(Dataset):
         
         ###output = self.dataset[idx]['output']
         timeseries=self.dataset[idx]['timeseries'] ###list of lists
-        prompt=f"<|system|> You are timeseries analyst<|end|><|user|>{input}<|end|><|assistant|><|thought|>"
+        prompt=f"<|user|>{input}<|end|><|assistant|><|thought|>"
         ##print(prompt)
         """messages = [
             {"role": "system", "content": "You are time series expert and answer the following question based on the timeseries provided"},

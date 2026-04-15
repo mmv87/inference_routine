@@ -29,7 +29,7 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
-eval_file='uni_local.jsonl'
+eval_file='uni_global.jsonl'
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.jsonl')
 
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
