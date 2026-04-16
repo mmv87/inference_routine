@@ -26,7 +26,7 @@ model.to(device)"""
 special_token_dict={'pad_token':"<|pad|>","additional_special_tokens":['<ts>','<ts/>']}
 tokenizer.add_special_tokens(special_token_dict)"""
 
-##align_256_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/align_256/train.jsonl'"""
+##align_256_file='D:/Doctoral_researh/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/align_256/train.jsonl'"""
 ##univar_eval="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/uni_local.jsonl"
 ##multi_local_eval="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/multi_local.jsonl"
 ###sft_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/sft/sft_train.jsonl'"""
@@ -291,7 +291,7 @@ class ts_textual(Dataset):
         #print(input)
         ###output = self.dataset[idx]['output']
         timeseries=self.dataset[idx]['timeseries'] ###list of lists
-        prompt=f"<|system|><|user|>{input}<|end|><|assistant|>"
+        prompt=f"<|system|>You are helpful AI assistant<|end|><|user|>{input}<|end|><|assistant|>"
         ##print(prompt)
         """messages = [
             {"role": "system", "content": "You are time series expert and answer the following question based on the timeseries provided"},
