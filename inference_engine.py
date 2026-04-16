@@ -199,7 +199,7 @@ conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer,checkpoint_dir=checkpoint_dir,device=device)
 ## loop around batches to return and generate prediction
-engine.predict(ts_loader,max_new_tokens=500) ### .predict executes 
+engine.predict(ts_loader,max_new_tokens=250) ### .predict executes 
 
 ##save the response
 """"
