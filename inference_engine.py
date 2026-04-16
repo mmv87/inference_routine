@@ -22,7 +22,6 @@ device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 file_path="/home/mmk/projects/def-zonata/mmk/version_3/stage_1_training"
 checkpoint_dir="/home/mmk/projects/def-zonata/mmk/version_3/stage_2_training"
-
 model_path="/home/mmk/projects/def-zonata/mmk/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/7a8c4e2e81eae20a606d811f475d7dc316dd916a"
 llm_model_path = os.path.abspath(model_path)
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
@@ -31,7 +30,6 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 ##sft_file=os.path.join(os.environ["SLURM_TMPDIR"],'synthetic_data.jsonl')
 eval_file='uni_global.jsonl'
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.jsonl')
-
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
 tokenizer_path =os.path.join(file_path,'llm_tokenizer')
 
@@ -61,7 +59,7 @@ class MultiModalInferenceEngine:
         self.base_model=AutoModelForCausalLM.from_pretrained(self.model_path,local_files_only=True)
         self.base_model.resize_token_embeddings(len(self.tokenizer))
         # 3. Load PEFT Adapters
-        self.model = PeftModel.from_pretrained(self.base_model, f"{checkpoint_dir}/phi4-ts-adapter_ver2")
+        self.model = PeftModel.from_pretrained(self.base_model, f"{checkpoint_dir}/phi4-ts-adapter_ver3")
         self.model_merged = self.model.merge_and_unload()
         self.model_merged.to(self.device).eval()
         
@@ -129,8 +127,7 @@ class MultiModalInferenceEngine:
                     # Write as a single line JSON (the 'l' in jsonl)
                     f.write(json.dumps(record)+"\n")
                 print('file_written')
-                        
-        
+                       
     def _assemble_inference_embeds(self, input_ids, ts_embeddings, ts_pairs):
         ###based on the scatter logic to assemble the input_context and ts_embeddings
         # Implementation based on our previous scatter logic
