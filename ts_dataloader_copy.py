@@ -18,50 +18,54 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 os.environ["HF_HUB_OFFLINE"] = "1"
 model_name='./hub/microsoft/phi-4-mini-reasoning'
 device ='cpu'
-print(device)"""
+print(device)
+"""
 """model=AutoModelForCausalLM.from_pretrained(abs_modelpath,local_files_only=True)
 model.to(device)"""
-
-"""tokenizer=AutoTokenizer.from_pretrained(abs_modelpath,local_file_only=True)
+"""
+tokenizer=AutoTokenizer.from_pretrained(abs_modelpath,local_file_only=True)
+###add special_tokens to the tokenizer
 special_token_dict={'pad_token':"<|pad|>","additional_special_tokens":['<ts>','<ts/>']}
 tokenizer.add_special_tokens(special_token_dict)"""
+##align_256_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/align_256/train.jsonl'"""
+#sft_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/sft/sft_train.jsonl'
+#ift_dataset ="D:/Doctoral_research/code_implementation/dataset/ChatTS-Training-Dataset/ift/train.jsonl"
 
-##align_256_file='D:/Doctoral_researh/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/align_256/train.jsonl'"""
-##univar_eval="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/uni_local.jsonl"
-##multi_local_eval="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/multi_local.jsonl"
-###sft_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/sft/sft_train.jsonl'"""
-##print(align_256_file)
 ## Dataset class to get the pipeline for a sample
 ## requirements for Dataset 
     ##1. To patchify the timeseries data (from 1D 1, T)---> (N*C,T)
     ##2. padding to the ts_tokens not requires
     ##3.return the actual_N indices per channel
     ### if the max_N and max_ch is fixed the indices of te assembled ts_tokens are fixed
+##dataset for IFT.jsonl file for univariate data
 
 class ts_textual(Dataset): 
-    def __init__(self,patch_len,stride,tokenizer,file,device=device):
+    def __init__(self,patch_len,stride,tokenizer,file,sample_size,device=device):
         super().__init__()
         self.patch_len=patch_len
         self.stride=stride
         self.tokenizer=tokenizer
         self.file=file
         self.device =device
-        self.dataset=[]
+        self.sample_size=sample_size
         self.byte_offset=[]
         
-        if self.file.endswith(".json"):
-            with open(self.file,'r',encoding='utf-8') as file:
-                self.dataset=json.load(file)
-        else:
-            ###modify to .jsonl format
-            with open(self.file,'r',encoding='utf-8') as f:
-                for line in f:
-                    self.dataset.append(json.loads(line))
+        with open(self.file,'rb') as f:
+            while True:
+                current_pos=f.tell()
+                line = f.readline()
+                if not line:
+                    break
+                if line.strip():
+                    try:
+                        self.byte_offset.append(current_pos)
+                    except:
+                        print('error in the line')
         
-    ##self.sliced_offset=self.byte_offset[:5000]
+        self.sliced_offset=self.byte_offset[:self.sample_size]
 
     def __len__(self):
-        return len(self.dataset)
+        return len(self.sliced_offset)
     
     def sp_encoding(self,timeseries):
         ##logic to get the normalize and get the 
@@ -107,7 +111,7 @@ class ts_textual(Dataset):
             # Update the offset for the NEXT iteration
             current_offset += meta_len
         
-        ##print(f'total_textual_len:{result.shape[1]}')
+        print(f'total_textual_len:{result.shape[1]}')
         return result,result.shape[1]
     
     def pad_and_patchify(self,ts_input:list,p,s):
@@ -208,9 +212,9 @@ class ts_textual(Dataset):
                 ts_patched=ts_patched.view(ts_tensor.shape[0],-1,p)
                 ##return ts_patched
         else:                ##univariate case
-            ##print('univariate')
+            print('univariate')
             ts_tensor=torch.tensor(ts_input)
-            ##print(ts_tensor.shape)
+            print(ts_tensor.shape)
             seq_len=ts_tensor.shape[1]
             ch_dim=ts_tensor.shape[0] ###ch=1 i.e univariate
             ##pad_width=(seq_len-p)%s
@@ -238,21 +242,25 @@ class ts_textual(Dataset):
             
         return ts_patched       
     
-    def ts_pair_indices(self,tokenized):
-        
-        """tokenized= self.tokenizer(prompt,return_tensors='pt',add_special_tokens=False)
-        input_ids= tokenized['input_ids'][0]"""
+    def ts_pair_indices(self,tokenized,prefix):
         ts_start_token=self.tokenizer.convert_tokens_to_ids('<ts>')
         ts_end_token=self.tokenizer.convert_tokens_to_ids('<ts/>')
         ts_position=[]
-        ##data structure to save the <ts>,<ts/> tokens ,list of tuples
+        
+        ##logic to ignore<ts><ts/> in the prefix prompt
+        if ts_start_token in prefix:
+            start_offset=True
+        else:
+            start_offset=False
+        print(start_offset)
         for i,token_id in enumerate(tokenized.tolist()):
             if (token_id==ts_start_token):
                 ts_position.append(('start',i))
             elif (token_id==ts_end_token):
-                ts_position.append(('end',i))   
+                ts_position.append(('end',i))
         stack =[]
         ts_pairs=[]
+        
         for j in range(len(ts_position)):
             pos,idx = ts_position[j]
             if pos=='start':
@@ -260,6 +268,10 @@ class ts_textual(Dataset):
             elif stack and pos=='end':
                 start=stack.pop(0)
                 ts_pairs.append((start,idx))
+                
+        if start_offset:
+            ts_pairs=ts_pairs[1:]
+        else:pass
 
         return ts_pairs,tokenized.shape[0] ##list of tuples
      
@@ -283,60 +295,58 @@ class ts_textual(Dataset):
         
     def __getitem__(self,idx):
         ##self.byte_offset[idx]
-        """with open(self.file,'rb') as file:
+        with open(self.file,'rb') as file:
             file.seek(self.sliced_offset[idx])
             line =file.readline()
-            sample =json.loads(line)"""
-        input = self.dataset[idx]['question']
-        #print(input)
-        ###output = self.dataset[idx]['output']
-        timeseries=self.dataset[idx]['timeseries'] ###list of lists
-        prompt=f"""<|system|>You are a timeseries expect,answer briefly to the following question based on the timeseries data provided<|end|>,
-                    <|user|>{input}<|end|><|assistant|>"""
-                
-        ##print(prompt)  
-        """messages = [
-            {"role": "system", "content": "You are time series expert and answer the following question based on the timeseries provided"},
-            {"role": "user", "content":f'{input}'}
-        ]
-        input_ids = self.tokenizer.apply_chat_template(
-            messages, 
-            tokenize=True, 
-            add_generation_prompt=True,
-            return_tensors="pt"
-        ).squeeze(0)"""
+            sample =json.loads(line)
+
+        input = sample['input']
+        output = sample['output']
+        timeseries=sample['timeseries'] ###list of lists
         
+        prefix_prompt=f"<|system|>You are timeseries analyst,based on the context and the timeseries embeddings inside the <ts><ts/> tags generate the suitable answer<|end|>"
+        prompt=f"<|user|>{input}<|end|>"
+        output_prompt=f"<|assistant|>{output}<|end|>"
+        
+        prefix_ids=self.tokenizer(prefix_prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
         input_ids=self.tokenizer(prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
-        #print(f'input_ids:{input_ids}')
+        ##output_ids=self.tokenizer(output_prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
+        
+        ###total_textual_ids
+        combined_ids=torch.cat([prefix_ids,input_ids],dim=0)
         ##normalize the ts_data
         norm_ts,meta_prompt = self.sp_encoding(timeseries)
-        ts_pairs,text_tokens_pre_meta_prompt=self.ts_pair_indices(input_ids)
-        print(ts_pairs)
-        ts_start=torch.tensor(ts_pairs)[:,0]        
-        new_text_tokens,total_text_tokens=self.insert_meta_prompt(input_ids,meta_prompt,ts_start)
-        ###print(f'total_textual:{new_text_tokens.shape}')
+        ts_pairs,text_tokens_pre_meta_prompt=self.ts_pair_indices(combined_ids,prefix_ids)
+        ts_start=torch.tensor(ts_pairs)[:,0]   
+        ##print(f'ts_start:{ts_start}')     
+        new_text_tokens,total_text_tokens=self.insert_meta_prompt(combined_ids,meta_prompt,ts_start)
         ts_patched =self.pad_and_patchify(norm_ts,self.patch_len,self.stride)
         ch=ts_patched.shape[0]
         N=ts_patched.shape[1]
         assert len(ts_pairs)==ch
         ts_tokens,text_tokens,total_multlimodal_tokens=self._calculate_ts_indices(ts_pairs,ch,N,total_text_tokens)
         ##labels
+        ##output_len=output_ids.shape[0]
+        ##labels = torch.full((total_multlimodal_tokens,),-100,dtype=torch.long,device=self.device)
+        ###labels[-output_len:] = output_ids.clone()
+        ###assert labels.shape==combined_ids.shape
         ##attention_mask
         attention_mask=torch.ones(total_multlimodal_tokens,dtype=torch.long,device=self.device)
-        ##attention_mask_batch.append(attention_mask)             
+        ##attention_mask_batch.append(attention_mask)  
+                  
         return{"input_ids":new_text_tokens,
             ##"output_ids":output_ids,
             "ts_input":ts_patched,
-            ##"labels":labels,
+            #"labels":labels,
             "attention_mask":attention_mask,
              "ts_indices":ts_tokens,
              "text_indices":text_tokens,
-             "ts_pairs":torch.tensor(ts_pairs)}
+             "ts_pairs":torch.tensor(ts_pairs),}
 
 ###collate function
 def collate_func(batch,tokenizer=None):
     input_ids = [x['input_ids'] for x in batch]
-    ##labels_batch=[x['labels'] for x in batch]
+    labels_batch=[x['labels'] for x in batch]
     attention_mask_batch=[x['attention_mask'] for x in batch]
     padded_ts_data=[x['ts_input'] for x in batch] 
     ts_pairs=[x['ts_pairs'] for x in batch]
@@ -346,22 +356,27 @@ def collate_func(batch,tokenizer=None):
     
     return{
         'input_ids':torch.cat(input_ids),
-        ##"labels":torch.stack(labels_batch),
+        #"labels":torch.stack(labels_batch),
         'attention_mask':torch.stack(attention_mask_batch),
         "time_series":torch.stack(padded_ts_data),
         "ts_indices":torch.stack(ts_indices),
         "textual_indices":torch.stack(text_indices),
         "ts_pairs":torch.stack(ts_pairs)}   ##list of tensor (bs,max_N,Patch_len)
 
+###dataset=ts_textual(128,128,_json_path,tokenizer_modified,device=device,model_dtype=None)
+##dataloader
 """
-dataset_for_test=ts_textual(128,128,tokenizer,multi_local_eval,device=device)
-dataloader=DataLoader(dataset_for_test,batch_size=1,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer))
-###input_embeds = model.get_input_embeddings()
+dataset_for_test=ts_textual(128,128,tokenizer,sft_file,1000,device=device)
+dataloader=DataLoader(dataset_for_test,batch_size=1,shuffle=True,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer))
+#input_embeds = model.get_input_embeddings()
 for idx,batch in enumerate(dataloader):
     if idx<5:
         print(batch['time_series'].shape)
         print(tokenizer.decode(batch['input_ids'][0]))
         print(f"input_ids:{batch['input_ids'].shape}")
-        print(f"attention:{batch['attention_mask'].shape}")
-    else:break"""
-    
+        ###text_embedding = input_embeds(batch['input_ids'])
+        ###print(f'textual_embedding{text_embedding.shape}')
+        print(batch['labels'].shape)
+        print(batch['attention_mask'].shape)
+    else:
+        break"""

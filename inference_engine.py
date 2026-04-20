@@ -4,7 +4,7 @@ from modules.ts_encoder import llm_projection
 from peft import PeftModel
 from transformers import AutoModelForCausalLM,AutoTokenizer
 ###from ts_dataloader import ts_textual,collate_func
-from ts_dataloader_ import ts_textual,collate_func
+from ts_dataloader_copy import ts_textual,collate_func
 from torch.utils.data import Dataset,DataLoader
 import torch
 import json
@@ -51,7 +51,6 @@ class MultiModalInferenceEngine:
         self.patch_len=patch_len
         self.conv_layers=conv_layers
         self.output_file=output_file
-    
         ###load the expanded tokenizer
         self.tokenizer=tokenizer
         ##self.ts_token_id = self.tokenizer.convert_tokens_to_ids("<ts>")
