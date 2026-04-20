@@ -304,7 +304,7 @@ class ts_textual(Dataset):
         ##output = sample['output']
         timeseries=sample['timeseries'] ###list of lists
         
-        prefix_prompt=f"<|system|>You are timeseries analyst,observe the timeseries embeddings inside the <ts><ts/> tags and the context provided  to answer the question, Keep it precise and brief<|end|>"
+        prefix_prompt=f"<|system|>You are timeseries analyst,based on the context and the timeseries embeddings inside the <ts><ts/>,answer the question.Keep it precise and brief<|end|>"
         prompt=f"<|user|>{input}<|end|><|assistant|>"
         ###output_prompt=f"<|assistant|>{output}<|end|>"
         
