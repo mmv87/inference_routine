@@ -291,7 +291,12 @@ class ts_textual(Dataset):
         #print(input)
         ###output = self.dataset[idx]['output']
         timeseries=self.dataset[idx]['timeseries'] ###list of lists
-        prompt=f"""<|system|>You are a timeseries expect,answer briefly to the following question based on the timeseries data provided<|end|>,
+        
+        prefix_prompt=f"<|system|>You are timeseries analyst,based on the context and the timeseries embeddings inside the <ts><ts/> tags generate the suitable answer<|end|>"
+        prompt=f"<|user|>{input}<|end|>"
+        output_prompt=f"<|assistant|>{output}<|end|>"
+        
+        prompt=f"""<|system|>You are a timeseries expert,answer briefly to the following question based on the timeseries data provided <|end|>,
                     <|user|>{input}<|end|><|assistant|>"""
                 
         ##print(prompt)  

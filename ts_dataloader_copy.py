@@ -300,13 +300,13 @@ class ts_textual(Dataset):
             line =file.readline()
             sample =json.loads(line)
 
-        input = sample['input']
-        output = sample['output']
+        input = sample['question']
+        ##output = sample['output']
         timeseries=sample['timeseries'] ###list of lists
         
         prefix_prompt=f"<|system|>You are timeseries analyst,based on the context and the timeseries embeddings inside the <ts><ts/> tags generate the suitable answer<|end|>"
         prompt=f"<|user|>{input}<|end|>"
-        output_prompt=f"<|assistant|>{output}<|end|>"
+        ###output_prompt=f"<|assistant|>{output}<|end|>"
         
         prefix_ids=self.tokenizer(prefix_prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
         input_ids=self.tokenizer(prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
@@ -346,7 +346,7 @@ class ts_textual(Dataset):
 ###collate function
 def collate_func(batch,tokenizer=None):
     input_ids = [x['input_ids'] for x in batch]
-    labels_batch=[x['labels'] for x in batch]
+    ##labels_batch=[x['labels'] for x in batch]
     attention_mask_batch=[x['attention_mask'] for x in batch]
     padded_ts_data=[x['ts_input'] for x in batch] 
     ts_pairs=[x['ts_pairs'] for x in batch]

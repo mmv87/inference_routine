@@ -67,7 +67,6 @@ class MultiModalInferenceEngine:
                              shared_embedding=False,d_ff=1024,norm='Layer',attn_dropout=0.,dropout=0.1,activation='gelu',store_attn=False,res_attention=False,pre_norm=True,pe='zeros',learn_pe=True,verbose=False)
         
         self.ts_conv_module=ConvFeatureExtraction(conv_layers,dropout=0.1)
-        
         ###main ts_encoder
         self.ts_encoder=llm_projection(self.ts_conv_module,64,self.ts_transformer,512,1024,3072)
         # Loading from the state_dict saved during training
