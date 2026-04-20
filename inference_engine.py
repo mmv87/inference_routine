@@ -106,10 +106,10 @@ class MultiModalInferenceEngine:
                         max_new_tokens=max_new_tokens,
                         pad_token_id=self.tokenizer.eos_token_id,
                         eos_token_id=self.tokenizer.eos_token_id,
-                        repetition_penalty=1.1,
+                        repetition_penalty=1.2,
                         do_sample=False,
                         ##num_beams=3,
-                        temperature=0.1
+                        temperature=0.01
                     )
 
                     ##modify for the batch_size of 1
@@ -197,7 +197,7 @@ conv_layers =[(128,5,1),(64,3,1)]
 ###instantiate inference wrapper passing llm_model location
 engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer,checkpoint_dir=checkpoint_dir,device=device)
 ## loop around batches to return and generate prediction
-engine.predict(ts_loader,max_new_tokens=250) ### .predict executes 
+engine.predict(ts_loader,max_new_tokens=512) ### .predict executes 
 
 ##save the response
 """"
