@@ -40,14 +40,14 @@ tokenizer.add_special_tokens(special_token_dict)"""
 ##dataset for IFT.jsonl file for univariate data
 
 class ts_textual(Dataset): 
-    def __init__(self,patch_len,stride,tokenizer,file,sample_size,device=device):
+    def __init__(self,patch_len,stride,tokenizer,file,device=device):
         super().__init__()
         self.patch_len=patch_len
         self.stride=stride
         self.tokenizer=tokenizer
         self.file=file
         self.device =device
-        self.sample_size=sample_size
+        #self.sample_size=sample_size
         self.byte_offset=[]
         
         with open(self.file,'rb') as f:
@@ -62,7 +62,7 @@ class ts_textual(Dataset):
                     except:
                         print('error in the line')
         
-        self.sliced_offset=self.byte_offset[:self.sample_size]
+        self.sliced_offset=self.byte_offset[:]
 
     def __len__(self):
         return len(self.sliced_offset)
