@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 ##import seaborn as sns
 ##from conv_module import ConvFeatureExtractionModel
 import math
-from embed_conv import ConvFeatureExtraction
+from modules.embed_conv import ConvFeatureExtraction
 #from torchinfo import summary
 
 ###device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
