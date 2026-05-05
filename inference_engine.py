@@ -20,8 +20,10 @@ import os
  ##llm_model.generate() using the input_embeds
 device=torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-file_path="/home/mmk/projects/def-zonata/mmk/version_3/stage_1_training"
-checkpoint_dir="/home/mmk/projects/def-zonata/mmk/version_3/stage_2_training"
+##update based on the latest run !
+llm_tokenizer_path="/home/mmk/projects/def-zonata/mmk/ver_4_resampler/stage_1_align"
+checkpoint_dir="/home/mmk/projects/def-zonata/mmk/ver_4_resampler/stage_2_sft"
+
 model_path="/home/mmk/projects/def-zonata/mmk/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/7a8c4e2e81eae20a606d811f475d7dc316dd916a"
 llm_model_path = os.path.abspath(model_path)
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
@@ -31,7 +33,7 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 eval_file='uni_global.jsonl'
 res_file=os.path.join(os.environ["SLURM_TMPDIR"],eval_file.split('.')[0]+'_res.jsonl')
 eval_data_set=os.path.join(os.environ["SLURM_TMPDIR"],eval_file)
-tokenizer_path =os.path.join(file_path,'llm_tokenizer')
+tokenizer_path =os.path.join(llm_tokenizer_path,'llm_tokenizer')
 
 tokenizer = AutoTokenizer.from_pretrained(model_path,local_files_only=True)
 special_token_dict={'pad_token':"<|pad|>","additional_special_tokens":['<ts>','<ts/>']}
@@ -69,6 +71,7 @@ class MultiModalInferenceEngine:
         ###main ts_encoder
         self.ts_encoder=llm_projection(self.ts_transformer,1024,2048,3072,device=self.device)
         # Loading from the state_dict saved during training
+        
         self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_encoder_ver2_final.pth"),strict=False)
         self.ts_encoder.to(self.device).eval()
         
