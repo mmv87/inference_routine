@@ -1,5 +1,5 @@
-from modules.ts_encoder_rel_bias import PatchTSTEncoder
-from modules.conv_module import ConvFeatureExtraction
+from modules.ts_encoder_perceiver_resampler import PatchTSTEncoder
+##from modules.conv_module import ConvFeatureExtraction
 from modules.ts_encoder import llm_projection
 from peft import PeftModel
 from transformers import AutoModelForCausalLM,AutoTokenizer
