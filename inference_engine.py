@@ -38,19 +38,19 @@ special_token_dict={'pad_token':"<|pad|>","additional_special_tokens":['<ts>','<
 tokenizer.add_special_tokens(special_token_dict)
 ###model.resize_token_embeddings(len(tokenizer))
 ###print(device) 
-
-ts_dataset=ts_textual(128,128,tokenizer,eval_data_set,device=device)
+ts_dataset=ts_textual(21,5,tokenizer,eval_data_set,device=device)
 ts_loader =DataLoader(ts_dataset,batch_size=1,shuffle=False,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer))
 
 class MultiModalInferenceEngine:
-    def __init__(self,output_file,model_path,patch_len,conv_layers,tokenizer,checkpoint_dir=None,device=device):
+    def __init__(self,output_file,model_path,conv_layers,tokenizer,lat_dim,checkpoint_dir=None,device=device):
         """self.prompt=prompt
         self.raw_ts=raw_ts"""
         self.device = device
         self.model_path=model_path
-        self.patch_len=patch_len
+        #self.patch_len=patch_len
         self.conv_layers=conv_layers
         self.output_file=output_file
+        self.lat_dim=lat_dim ###latent_q dimension
         ###load the expanded tokenizer
         self.tokenizer=tokenizer
         ##self.ts_token_id = self.tokenizer.convert_tokens_to_ids("<ts>")
@@ -63,12 +63,11 @@ class MultiModalInferenceEngine:
         self.model_merged.to(self.device).eval()
         
         # 4. Initialize and Load TS Encoder
-        self.ts_transformer=PatchTSTEncoder(patch_len=self.patch_len,n_layers=2,d_model=512,n_heads=4,
-                             shared_embedding=False,d_ff=1024,norm='Layer',attn_dropout=0.,dropout=0.1,activation='gelu',store_attn=False,res_attention=False,pre_norm=True,pe='zeros',learn_pe=True,verbose=False)
-        
-        self.ts_conv_module=ConvFeatureExtraction(conv_layers,dropout=0.1)
+        self.ts_transformer=PatchTSTEncoder(self.conv_layers,1024,max_ch=21,n_layers=1,d_model=256,n_heads=2,d_ff=256,bias=False,lat_dim=self.lat_dim,
+                 dropout=0.1,activation='gelu',pre_norm=True,device=self.device)
+        #self.ts_conv_module=ConvFeatureExtraction(conv_layers,dropout=0.1)
         ###main ts_encoder
-        self.ts_encoder=llm_projection(self.ts_conv_module,64,self.ts_transformer,512,1024,3072)
+        self.ts_encoder=llm_projection(self.ts_transformer,1024,2048,3072,device=self.device)
         # Loading from the state_dict saved during training
         self.ts_encoder.load_state_dict(torch.load(f"{checkpoint_dir}/ts_encoder_ver2_final.pth"),strict=False)
         self.ts_encoder.to(self.device).eval()
@@ -79,7 +78,7 @@ class MultiModalInferenceEngine:
         padded_ts_input: List of tensors, each (max_patches, patch_length)"""
         ###responses =[]
         # --- Preprocessed data object---
-        # batch of outputs (BS=5, N, Max_Ch, P)
+        # batch of outputs (BS=5,T,d_embed)
         with open(self.output_file,'a',encoding='utf-8') as f:
             with torch.no_grad(): 
                 response_list=[]
@@ -91,14 +90,13 @@ class MultiModalInferenceEngine:
                     ts_seq_index=batch["ts_indices"]
                     textual_index=batch['textual_indices']
                     # Encode TS
-                    # ts_embedding output: (bs, max_ch, max_patches, d_model)
-                    ts_embedding = self.ts_encoder(ts_input)
-                    
+                    # ts_embedding output: (bs,T, d_model)
+                    ts_embedding = self.ts_encoder(ts_input) ### [b,105,d_embed]
+                     
                 # --- Assemble Embeddings ---
                 # Use refined assembly logic (handling the 10 tokens per channel)
                     input_embeds = self.v2_assemble_input_embeds(input_ids,ts_embedding,ts_seq_index,textual_index,ts_pairs)
                     ##print(f'input_embeds:{input_embeds.shape}')
-
                 # --- Generation of batch of prediced tokens
                     output_ids = self.model_merged.generate(
                         inputs_embeds=input_embeds,
@@ -107,11 +105,10 @@ class MultiModalInferenceEngine:
                         pad_token_id=self.tokenizer.eos_token_id,
                         eos_token_id=self.tokenizer.eos_token_id,
                         repetition_penalty=1.2,
-                        do_sample=False,
+                        do_sample=False,top_p=0.9,
                         ##num_beams=3,
                         temperature=0.01
                     )
-
                     ##modify for the batch_size of 1
                     ###responsed=self.self.tokenizer.decode()
                     responses=self.tokenizer.batch_decode(output_ids, skip_special_tokens=True)
@@ -160,27 +157,31 @@ class MultiModalInferenceEngine:
         
         return final_embeds.unsqueeze(0)
     
-    def v2_assemble_input_embeds(self,input_ids,ts_embeddings,ts_token_idx,text_token_idx,ts_pairs:torch.tensor):
+    def v2_assemble_input_embeds(self,input_ids,ts_embeddings,ts_token_idx,text_token_idx,lat_dim,ts_pairs:torch.tensor):
         ###logic to assemble textual and ts_tokens batch-wise
         ###assemb_embed_tensor=[] 
         channels=ts_pairs.shape[1]
-        bs=ts_embeddings.shape[0]
-        c_in=ts_embeddings.shape[1]
-        assert c_in==channels
-        num_ts_tokens=ts_embeddings.shape[2]
-        ts_emb_dim=ts_embeddings.shape[3]
+        
+        slicing_dim=channels*self.lat_dim
+        ts_embeddings_slice=torch.narrow(ts_embeddings,1,0,slicing_dim)
+        ts_embeddings_slice.to(self.device)
+        
+        bs=ts_embeddings_slice.shape[0]
+        T=ts_embeddings_slice.shape[1]
+        assert T==channels
+        #num_ts_tokens=ts_embeddings.shape[2]
+        ts_emb_dim=ts_embeddings_slice.shape[2]
 
         ##ts_embeddings=ts_embeddings.view(bs*c_in,num_ts_tokens,-1)        
         input_embeds=self.model.get_input_embeddings()(input_ids) ##[bs,seq_len,d_emb]
-        flat_ts_embeddings=ts_embeddings.view(-1,c_in*num_ts_tokens,ts_emb_dim).to(self.device)
-
+        flat_ts_embeddings=ts_embeddings_slice.view(-1,T,ts_emb_dim).to(self.device)
         text_emb_dim= input_embeds.shape[2]
         assert (ts_emb_dim==text_emb_dim)
         ###new total_sequence length    
         T_new=ts_token_idx.shape[1]+text_token_idx.shape[1]
-        print(T_new)
+        #print(T_new)
         final_container =torch.zeros((bs,T_new,text_emb_dim),device=self.device,dtype=ts_embeddings.dtype) ### total_idx,total_idx
-        
+    
         flat_text_embeddings=input_embeds
         ##get the indices after the <ts>....<ts/> placeholder is offseted
         ts_indices=ts_token_idx.unsqueeze(-1).expand(-1, -1, text_emb_dim).to(self.device)
@@ -193,9 +194,9 @@ class MultiModalInferenceEngine:
         assemb_embed_tensor.append(final_tensor)"""
         
         return final_container.to(self.device)
-conv_layers =[(128,5,1),(64,3,1)]
+conv_layers =[(64,7,3,1),(128,5,3,2),(256,3,2,2),(512,3,2,2),(1024,3,2,2)]
 ###instantiate inference wrapper passing llm_model location
-engine = MultiModalInferenceEngine(res_file,llm_model_path,128,conv_layers,tokenizer,checkpoint_dir=checkpoint_dir,device=device)
+engine = MultiModalInferenceEngine(res_file,llm_model_path,conv_layers,tokenizer,checkpoint_dir=checkpoint_dir,device=device)
 ## loop around batches to return and generate prediction
 engine.predict(ts_loader,max_new_tokens=512) ### .predict executes 
 

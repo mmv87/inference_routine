@@ -11,7 +11,7 @@ from transformers import AutoModelForCausalLM,AutoTokenizer
 import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 device ='cuda' if torch.cuda.is_available() else 'cpu'
-"""
+
 abs_modelpath="D:/hf_cache/hub/models--microsoft--Phi-4-mini-reasoning/snapshots/0e3b1e2d02ee478a3743abe3f629e9c0cb722e0a"
 ##print('path_read')
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
@@ -19,31 +19,28 @@ os.environ["HF_HUB_OFFLINE"] = "1"
 model_name='./hub/microsoft/phi-4-mini-reasoning'
 device ='cpu'
 print(device)
-"""
+
 """model=AutoModelForCausalLM.from_pretrained(abs_modelpath,local_files_only=True)
 model.to(device)"""
-"""
+
 tokenizer=AutoTokenizer.from_pretrained(abs_modelpath,local_file_only=True)
 ###add special_tokens to the tokenizer
 special_token_dict={'pad_token':"<|pad|>","additional_special_tokens":['<ts>','<ts/>']}
-tokenizer.add_special_tokens(special_token_dict)"""
+tokenizer.add_special_tokens(special_token_dict)
 ##align_256_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/align_256/train.jsonl'"""
 #sft_file='D:/Doctoral_research/code_implementation/Time_series_reasoning/training_dataset/ChatTS-Training-Dataset/sft/sft_train.jsonl'
 #ift_dataset ="D:/Doctoral_research/code_implementation/dataset/ChatTS-Training-Dataset/ift/train.jsonl"
+uni_global="D:/Doctoral_research/code_implementation/Time_series_reasoning/dataset/uni_global.jsonl"
 
 ## Dataset class to get the pipeline for a sample
-## requirements for Dataset 
-    ##1. To patchify the timeseries data (from 1D 1, T)---> (N*C,T)
-    ##2. padding to the ts_tokens not requires
-    ##3.return the actual_N indices per channel
-    ### if the max_N and max_ch is fixed the indices of te assembled ts_tokens are fixed
-##dataset for IFT.jsonl file for univariate data
+## dataset inference :
+## 1 . univariate / multivariate 
 
 class ts_textual(Dataset): 
-    def __init__(self,patch_len,stride,tokenizer,file,device=device):
+    def __init__(self,max_ch,lat_dim,tokenizer,file,device=device):
         super().__init__()
-        self.patch_len=patch_len
-        self.stride=stride
+        self.max_ch=max_ch
+        self.lat_dim=lat_dim
         self.tokenizer=tokenizer
         self.file=file
         self.device =device
@@ -114,7 +111,7 @@ class ts_textual(Dataset):
         print(f'total_textual_len:{result.shape[1]}')
         return result,result.shape[1]
     
-    def pad_and_patchify(self,ts_input:list,p,s):
+    def pad_and_patchify(self,ts_input:list):
         seq_len_list=[]
         pad_pattern=torch.tensor([0.0,0.0],dtype=torch.float16)
         ###ts_type=None
@@ -131,116 +128,34 @@ class ts_textual(Dataset):
                 ###remove the stagger
                 for metric in ts_input:
                     ts_padded_list.append(torch.tensor(metric))
+                    
                 ts_uniform=pad_sequence(ts_padded_list,batch_first=True,padding_value=0)
                 ch_dim=ts_uniform.shape[0]
                 seq_len=ts_uniform.shape[1]
                 assert ts_uniform.shape[1]==max(seq_len_list)
-                """##ts_univariate_tensor=torch.tensor(metric).squeeze(-1).unsqueeze(0) ##reshape to (1,seq_len)
-                    ##ts_univariate_tensor=ts_univariate_tensor.
-                    pad_width =max(seq_len_list)-ts_univariate_tensor.shape[1]
-                    repeats=torch.zeros()
-                    repeats=pad_width//2
-                    pad_repeat=pad_pattern.repeat(repeats)
-                    ts_uni_padded=torch.cat([ts_univariate_tensor,pad_repeat.view(1,-1)],dim=1)
-                    ts_padded_list.append(ts_uni_padded) ##list of tensors in a multivariate channel"""
-                """ts_local_padded=torch.cat(ts_padded_list)
-                ts_local_padded=ts_local_padded.unsqueeze(-1)
-                seq_len=ts_local_padded.shape[1]"""
                 ##apply second_level padding
-                if (seq_len%p)==0:      ##zero_padding
-                    pad_width=0
-                    pad_repeat=pad_width
-                elif seq_len<p:         ##pad_length > seq_len
-                    ##pad to seq_len
-                    pad_width=p-seq_len
-                    pad_repeat=pad_width
-                else:
-                    ##padding case
-                    pad_width=p-(seq_len%p)
-                    pad_repeat=pad_width
-                    
-                if (pad_repeat!=0):
-                    padding_pattern=torch.zeros((ch_dim,pad_repeat))
-                    ts_padded =torch.cat([ts_uniform,padding_pattern],dim=1)
-                else:
-                    ts_padded=ts_uniform.clone()
-                
-                ts_patched=ts_padded.unfold(dimension=1,size=p,step=s)
-                ts_patched=ts_patched.contiguous()
-                ts_patched=ts_patched.view(ts_uniform.shape[0],-1,p)
-                """
-                padding_pattern=pad_pattern.repeat(pad_repeat)
-                padding_pattern=padding_pattern.view(1,-1,1)
-                pattern=padding_pattern.repeat(ts_local_padded.size(0), 1, ts_local_padded.size(2))
-                ts_l2_padded =torch.cat([ts_local_padded,pattern],dim=1)
-        
-                ts_patched=ts_l2_padded.unfold(dimension=1,size=p,step=s)
-                ts_patched=ts_patched.view(ts_local_padded.shape[0],-1,p)"""
                 ###logic to correct the stagger 
             else:
                 print('uniform')
                 ts_tensor=torch.tensor(ts_input)
+                ts_uniform=ts_tensor.clone()
                 ##print(ts_tensor.shape)
                 ###ts_tensor.unsqueeze_(-1)
                 ##print(f'ts_tensor_shape:{ts_tensor.shape}')
-                seq_len=ts_tensor.shape[1]
-                ch_dim=ts_tensor.shape[0]
+                seq_len=ts_uniform.shape[1]
+                ch_dim=ts_uniform.shape[0]
                 ###print(f'seq_len:{seq_len}')
-                if (seq_len%p)==0:      ##zero_padding
-                    pad_width=0
-                    pad_repeat=pad_width
                 
-                elif (seq_len<p):         ##patch_len > seq_len
-                    ##pad to seq_len
-                    pad_width=p-seq_len
-                    pad_repeat=pad_width 
-                    
-                else:
-                    ##padding case
-                    pad_width=p-(seq_len%p)
-                    pad_repeat=pad_width
-
-                ##print(f'pad_repeat{pad_repeat}')
-                if (pad_repeat!=0):
-                    padding_pattern=torch.zeros((ch_dim,pad_repeat))
-                    ts_padded =torch.cat([ts_tensor,padding_pattern],dim=1)
-                else:
-                    ts_padded=ts_tensor.clone()
-                    
-                ts_patched=ts_padded.unfold(dimension=1,size=p,step=s)
-                ts_patched=ts_patched.contiguous()
-                ts_patched=ts_patched.view(ts_tensor.shape[0],-1,p)
-                ##return ts_patched
         else:                ##univariate case
             print('univariate')
             ts_tensor=torch.tensor(ts_input)
-            print(ts_tensor.shape)
+            ts_uniform=ts_tensor.clone()
+            #print(ts_tensor.shape)
             seq_len=ts_tensor.shape[1]
             ch_dim=ts_tensor.shape[0] ###ch=1 i.e univariate
             ##pad_width=(seq_len-p)%s
-            
-            if (seq_len%p==0):
-                pad_width=0
-                pad_repeat=pad_width
-            elif seq_len<p:
-                pad_width=p-seq_len
-                pad_repeat=pad_width
-            else:
-                pad_width=p-seq_len%p
-                pad_repeat=pad_width
-            
-            if (pad_repeat!=0):
-                padding_pattern=torch.zeros((ch_dim,pad_repeat))
-                ts_padded =torch.cat([ts_tensor,padding_pattern],dim=1)
-            else:
-                ts_padded=ts_tensor.clone()
-            
-            ts_patched=ts_padded.unfold(1,p,s)
-            ts_patched=ts_patched.contiguous()
-            ts_patched=ts_patched.view(ts_tensor.shape[0],-1,p)
-            ##return ts_patched
-            
-        return ts_patched       
+                        
+        return ts_uniform       
     
     def ts_pair_indices(self,tokenized,prefix):
         ts_start_token=self.tokenizer.convert_tokens_to_ids('<ts>')
@@ -311,7 +226,6 @@ class ts_textual(Dataset):
         prefix_ids=self.tokenizer(prefix_prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
         input_ids=self.tokenizer(prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
         ##output_ids=self.tokenizer(output_prompt,return_tensors='pt',add_special_tokens=False)['input_ids'][0]
-        
         ###total_textual_ids
         combined_ids=torch.cat([prefix_ids,input_ids],dim=0)
         ##normalize the ts_data
@@ -320,28 +234,28 @@ class ts_textual(Dataset):
         ts_start=torch.tensor(ts_pairs)[:,0]   
         ##print(f'ts_start:{ts_start}')     
         new_text_tokens,total_text_tokens=self.insert_meta_prompt(combined_ids,meta_prompt,ts_start)
-        ts_patched =self.pad_and_patchify(norm_ts,self.patch_len,self.stride)
-        ch=ts_patched.shape[0]
-        N=ts_patched.shape[1]
+        ts_uniform =self.pad_and_patchify(norm_ts)
+        ch=ts_uniform.shape[0]
+        ##N=ts_patched.shape[1]
         assert len(ts_pairs)==ch
-        ts_tokens,text_tokens,total_multlimodal_tokens=self._calculate_ts_indices(ts_pairs,ch,N,total_text_tokens)
-        ##labels
-        ##output_len=output_ids.shape[0]
-        ##labels = torch.full((total_multlimodal_tokens,),-100,dtype=torch.long,device=self.device)
-        ###labels[-output_len:] = output_ids.clone()
-        ###assert labels.shape==combined_ids.shape
-        ##attention_mask
+        ts_tokens,text_tokens,total_multlimodal_tokens=self._calculate_ts_indices(ts_pairs,ch,self.lat_dim,total_text_tokens)
+        
         attention_mask=torch.ones(total_multlimodal_tokens,dtype=torch.long,device=self.device)
         ##attention_mask_batch.append(attention_mask)  
+        bool_mask=torch.zeros(self.max_ch*self.lat_dim ,dtype=torch.bool)
+        token_idx=torch.arange(ch*self.lat_dim)
+        bool_mask[token_idx]=True
+        bool_mask.to(self.device)
                   
         return{"input_ids":new_text_tokens,
             ##"output_ids":output_ids,
-            "ts_input":ts_patched,
+            "ts_input":ts_uniform,
             #"labels":labels,
             "attention_mask":attention_mask,
              "ts_indices":ts_tokens,
              "text_indices":text_tokens,
-             "ts_pairs":torch.tensor(ts_pairs),}
+             "ts_pairs":torch.tensor(ts_pairs),
+             "ch_mask":bool_mask.unsqueeze(-1)}
 
 ###collate function
 def collate_func(batch,tokenizer=None):
@@ -353,6 +267,7 @@ def collate_func(batch,tokenizer=None):
     ###assembler helper vars
     ts_indices =[x['ts_indices'] for x in batch] 
     text_indices=[x['text_indices'] for x in batch]
+    ch_mask_batch=[x['ch_mask'] for x in batch]
     
     return{
         'input_ids':torch.cat(input_ids),
@@ -361,22 +276,24 @@ def collate_func(batch,tokenizer=None):
         "time_series":torch.stack(padded_ts_data),
         "ts_indices":torch.stack(ts_indices),
         "textual_indices":torch.stack(text_indices),
-        "ts_pairs":torch.stack(ts_pairs)}   ##list of tensor (bs,max_N,Patch_len)
+        "ts_pairs":torch.stack(ts_pairs),
+        "ch_mask":torch.stack(ch_mask_batch,dim=0)}   ##list of tensor (bs,max_N,Patch_len)
 
 ###dataset=ts_textual(128,128,_json_path,tokenizer_modified,device=device,model_dtype=None)
 ##dataloader
-"""
-dataset_for_test=ts_textual(128,128,tokenizer,sft_file,1000,device=device)
+dataset_for_test=ts_textual(21,5,tokenizer,uni_global,device=device)
 dataloader=DataLoader(dataset_for_test,batch_size=1,shuffle=True,collate_fn=lambda b:collate_func(b,tokenizer=tokenizer))
 #input_embeds = model.get_input_embeddings()
 for idx,batch in enumerate(dataloader):
     if idx<5:
         print(batch['time_series'].shape)
-        print(tokenizer.decode(batch['input_ids'][0]))
-        print(f"input_ids:{batch['input_ids'].shape}")
+        ###print(tokenizer.decode(batch['input_ids'][0]))
+        print(batch['ts_indices'].shape)
+        print(batch["textual_indices"].shape)
+        """print(f"input_ids:{batch['input_ids'].shape}")
         ###text_embedding = input_embeds(batch['input_ids'])
         ###print(f'textual_embedding{text_embedding.shape}')
-        print(batch['labels'].shape)
-        print(batch['attention_mask'].shape)
+        ##print(batch['labels'].shape)
+        print(batch['attention_mask'].shape)"""
     else:
-        break"""
+        break
