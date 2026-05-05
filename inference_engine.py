@@ -1,5 +1,7 @@
+##from modules.conv_module import ConvFeatureExtraction'
+
+
 from modules.ts_encoder_perceiver_resampler import PatchTSTEncoder
-##from modules.conv_module import ConvFeatureExtraction
 from modules.ts_encoder import llm_projection
 from peft import PeftModel
 from transformers import AutoModelForCausalLM,AutoTokenizer
@@ -89,12 +91,13 @@ class MultiModalInferenceEngine:
                     ts_input=batch['time_series'].to(self.device)
                     attn_mask=batch['attention_mask'].to(self.device)
                     input_ids=batch['input_ids'].to(self.device)
-                    ts_pairs=batch['ts_pairs']
-                    ts_seq_index=batch["ts_indices"]
-                    textual_index=batch['textual_indices']
+                    ts_pairs=batch['ts_pairs'].to(self.device)
+                    ts_seq_index=batch["ts_indices"].to(self.device)
+                    textual_index=batch['textual_indices'].to(self.device)
+                    ch_mask=batch['ch_mask'].to(self.device)
                     # Encode TS
                     # ts_embedding output: (bs,T, d_model)
-                    ts_embedding = self.ts_encoder(ts_input) ### [b,105,d_embed]
+                    ts_embedding = self.ts_encoder(ts_input,ch_mask=ch_mask) ### [b,105,d_embed]
                      
                 # --- Assemble Embeddings ---
                 # Use refined assembly logic (handling the 10 tokens per channel)
