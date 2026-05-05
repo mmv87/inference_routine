@@ -157,7 +157,7 @@ class MultiModalInferenceEngine:
         
         return final_embeds.unsqueeze(0)
     
-    def v2_assemble_input_embeds(self,input_ids,ts_embeddings,ts_token_idx,text_token_idx,lat_dim,ts_pairs:torch.tensor):
+    def v2_assemble_input_embeds(self,input_ids,ts_embeddings,ts_token_idx,text_token_idx,ts_pairs:torch.tensor):
         ###logic to assemble textual and ts_tokens batch-wise
         ###assemb_embed_tensor=[] 
         channels=ts_pairs.shape[1]
@@ -196,7 +196,8 @@ class MultiModalInferenceEngine:
         return final_container.to(self.device)
 conv_layers =[(64,7,3,1),(128,5,3,2),(256,3,2,2),(512,3,2,2),(1024,3,2,2)]
 ###instantiate inference wrapper passing llm_model location
-engine = MultiModalInferenceEngine(res_file,llm_model_path,conv_layers,tokenizer,checkpoint_dir=checkpoint_dir,device=device)
+latent_query=5
+engine = MultiModalInferenceEngine(res_file,llm_model_path,conv_layers,tokenizer,latent_query,checkpoint_dir=checkpoint_dir,device=device)
 ## loop around batches to return and generate prediction
 engine.predict(ts_loader,max_new_tokens=512) ### .predict executes 
 
