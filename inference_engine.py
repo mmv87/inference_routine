@@ -174,7 +174,7 @@ class MultiModalInferenceEngine:
         
         bs=ts_embeddings_slice.shape[0]
         T=ts_embeddings_slice.shape[1]
-        assert T==channels
+        assert T==(channels*self.lat_dim)
         #num_ts_tokens=ts_embeddings.shape[2]
         ts_emb_dim=ts_embeddings_slice.shape[2]
 
